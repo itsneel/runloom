@@ -1,0 +1,56 @@
+<dialog
+  #dialog
+  class="search-dialog"
+  aria-labelledby="search-title"
+  (close)="dismissed.emit()"
+  (keydown.escape)="$event.preventDefault(); $event.stopPropagation(); close()"
+  (click)="$event.target === dialog && close()"
+>
+  <div class="search-top">
+    <docs-icon name="search" /><label class="sr-only" id="search-title" for="docs-query"
+      >Search documentation</label
+    ><input
+      #input
+      id="docs-query"
+      type="search"
+      placeholder="Search documentation…"
+      autocomplete="off"
+      [value]="query()"
+      (input)="update(input.value)"
+      (keydown)="navigate($event)"
+    /><button class="icon-button" aria-label="Close search" (click)="close()">
+      <docs-icon name="close" />
+    </button>
+  </div>
+  <div class="results" aria-live="polite">
+    @if (loading()) {
+      <p class="search-hint">Loading the documentation index…</p>
+    } @else if (error()) {
+      <p class="search-hint">Search could not load. You can still browse the sidebar.</p>
+      <button class="secondary retry" (click)="open()">Retry search</button>
+    } @else if (!query().trim()) {
+      <p class="search-hint">Try “database”, “publish”, “Lumi” or “budget”.</p>
+    } @else if (!results().length) {
+      <p class="search-hint">No results for “{{ query() }}”. Try a different term.</p>
+    }
+    @for (result of results(); track result.slug; let index = $index) {
+      <a
+        [id]="'result-' + index"
+        [routerLink]="'/' + result.slug"
+        (click)="close()"
+        [class.selected]="selected() === index"
+        ><span class="result-icon"><docs-icon name="book" /></span
+        ><span
+          ><small>{{ result.group }}</small
+          ><strong>{{ result.title }}</strong
+          ><span>{{ result.description }}</span></span
+        ><docs-icon name="arrow"
+      /></a>
+    }
+  </div>
+  <div class="search-footer">
+    <span><kbd>↑</kbd> <kbd>↓</kbd> to navigate</span><span><kbd>Enter</kbd> to open</span
+    ><span><kbd>Esc</kbd> to close</span
+    ><span class="private-search">Search stays in your browser</span>
+  </div>
+</dialog>

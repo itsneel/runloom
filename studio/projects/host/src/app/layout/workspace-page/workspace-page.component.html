@@ -1,0 +1,7 @@
+<runloom-remote-outlet
+  [kind]="platform ? 'platform' : management || !auth.team() ? 'management' : 'workflows'"
+  [platformSection]="platformSection"
+  [orgId]="auth.organizationId()" [teamId]="auth.teamId()" [section]="section"
+  [projectsView]="projectsView"
+  [projectId]="projectId" [workflowId]="workflowId"
+  [navigationExpanded]="layout().navigationExpanded" />

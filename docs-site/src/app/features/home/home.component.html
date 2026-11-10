@@ -1,0 +1,85 @@
+<div class="page-grid">
+  <div class="page-content">
+    <div class="breadcrumbs"><span>Documentation</span><span>/</span><span>Introduction</span></div>
+    <section class="hero" id="introduction">
+      <div class="eyebrow">Runloom documentation</div>
+      <h1>Build workflows.<br />Make work flow.</h1>
+      <p>
+        Everything you need to build, run and manage reliable workflows. Start small. Connect your
+        tools. Make it your own.
+      </p>
+      <div class="hero-actions">
+        <a class="primary" routerLink="/getting-started/docker-compose"
+          >Get started<docs-icon name="arrow" /></a
+        ><a class="secondary" routerLink="/getting-started/overview">Explore concepts</a>
+      </div>
+    </section>
+    <div
+      class="workflow-preview"
+      aria-label="Illustrative workflow: Trigger, Transform, Send email"
+    >
+      <div class="flow-node">
+        <span class="node-icon"><docs-icon name="bolt" /></span>
+        <div><strong>Trigger</strong><small>Start with an event</small></div>
+      </div>
+      <docs-icon name="arrow" />
+      <div class="flow-node">
+        <span class="node-icon"><docs-icon name="sliders" /></span>
+        <div><strong>Transform</strong><small>Shape your data</small></div>
+      </div>
+      <docs-icon name="arrow" />
+      <div class="flow-node">
+        <span class="node-icon"><docs-icon name="mail" /></span>
+        <div><strong>Send email</strong><small>Keep people informed</small></div>
+      </div>
+    </div>
+    <section id="start-building" aria-labelledby="start-title">
+      <div class="section-heading">
+        <h2 id="start-title">Find your next step</h2>
+        <span>A little guidance goes a long way.</span>
+      </div>
+      <div class="cards">
+        @for (card of cards; track card.route) {
+          <a class="card" [routerLink]="card.route"
+            ><span class="card-icon"><docs-icon [name]="card.icon" /></span>
+            <div>
+              <h3>{{ card.title }}</h3>
+              <p>{{ card.text }}</p>
+            </div>
+            <docs-icon name="arrow"
+          /></a>
+        }
+      </div>
+    </section>
+    <section class="explore" id="explore-runloom">
+      <div>
+        <span class="eyebrow">Understand the platform</span>
+        <h2>One workflow. Every detail covered.</h2>
+        <p>
+          Learn how drafts become versions, how runs progress, and how your team stays in control.
+        </p>
+      </div>
+      <div class="explore-links">
+        <a routerLink="/nodes/reference">Browse the node reference<docs-icon name="arrow" /></a
+        ><a routerLink="/guides/versioning"
+          >Understand versions & publishing<docs-icon name="arrow" /></a
+        ><a routerLink="/guides/lumi"
+          >Meet Lumi, your workflow assistant<docs-icon name="arrow"
+        /></a>
+      </div>
+    </section>
+    <footer>Runloom documentation<span>Built for builders and operators.</span></footer>
+  </div>
+  <aside class="page-aside">
+    <div class="aside-sticky">
+      <h2>On this page</h2>
+      <a href="#introduction" class="active">Introduction</a
+      ><a href="#start-building">Start building</a><a href="#explore-runloom">Explore Runloom</a>
+      <div class="aside-help">
+        <h2>New to workflows?</h2>
+        <p>Learn the key concepts and see how Runloom fits in.</p>
+        <a routerLink="/getting-started/overview">What is Runloom? →</a>
+      </div>
+    </div>
+  </aside>
+</div>

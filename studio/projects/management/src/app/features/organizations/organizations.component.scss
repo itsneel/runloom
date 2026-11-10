@@ -1,0 +1,68 @@
+.panel {
+  margin-bottom: 20px;
+  padding: 24px;
+}
+code {
+  overflow-wrap: anywhere;
+}
+.org-tree {
+  margin: 20px 0;
+}
+.org-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--rl-border);
+  border-radius: 10px;
+  background: var(--rl-soft);
+  margin-bottom: 10px;
+}
+.org-row.current {
+  border-color: var(--rl-accent);
+}
+.org-row > div {
+  flex: 1;
+  min-width: 0;
+}
+.org-row strong {
+  overflow-wrap: anywhere;
+}
+.org-row small {
+  display: block;
+  margin-top: 4px;
+}
+.org-mark {
+  display: grid;
+  place-items: center;
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--rl-surface);
+  font-size: 12px;
+  font-weight: 600;
+}
+.children {
+  border-left: 1px solid var(--rl-border);
+  margin-left: 32px;
+  padding-left: 24px;
+}
+.create-panel form {
+  max-width: 600px;
+}
+@media (max-width: 600px) {
+  .panel {
+    padding: 16px;
+  }
+  .children {
+    margin-left: 10px;
+    padding-left: 12px;
+  }
+  .org-row {
+    flex-wrap: wrap;
+  }
+  .org-row button {
+    width: 100%;
+  }
+}

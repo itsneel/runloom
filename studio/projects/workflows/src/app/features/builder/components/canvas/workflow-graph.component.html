@@ -1,0 +1,176 @@
+<div
+  #viewport
+  class="graph-viewport"
+  tabindex="0"
+  aria-label="Workflow graph"
+  [class.panning]="gesture && !gesture.node"
+  [class.space-pan]="space"
+  (wheel)="onWheel($event)"
+  (pointerdown)="startPointer($event)"
+  (pointermove)="movePointer($event)"
+  (pointerup)="finishPointer($event)"
+  (pointercancel)="cancelGesture()"
+  [style.background-position]="pan.x + 'px ' + pan.y + 'px'"
+  [style.background-size]="20 * zoom + 'px ' + 20 * zoom + 'px'"
+>
+  <div class="graph-world" [style.transform]="transform">
+    <svg class="connections" aria-hidden="true">
+      <defs>
+        <marker id="canvas-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+          <path d="M0 0 L8 4 L0 8 Z" />
+        </marker>
+      </defs>
+      <path
+        *ngFor="let edge of scene.edges; trackBy: trackEdge"
+        class="connection"
+        [attr.data-edge]="edge.key"
+        [attr.d]="geometry(edge).path"
+        marker-end="url(#canvas-arrow)"
+      />
+    </svg>
+    <div
+      class="wire"
+      *ngFor="let edge of scene.edges; trackBy: trackEdge"
+      [style.left.px]="geometry(edge).middle.x"
+      [style.top.px]="geometry(edge).middle.y"
+      [class.move-target]="moving"
+    >
+      <span class="edge-label" *ngIf="edge.label">{{ edge.label }}</span>
+      <button
+        *ngIf="edge.insert"
+        type="button"
+        [disabled]="!editable"
+        [attr.aria-label]="
+          (moving ? 'Move node to ' : 'Add node to ') +
+          (edge.label ||
+            edge.insert.steps[edge.insert.index]?.name ||
+              edge.insert.steps[edge.insert.index]?.id ||
+              'end of path')
+        "
+        (click)="insert(edge)"
+      >
+        <runloom-icon name="plus" />
+      </button>
+    </div>
+    <article
+      *ngFor="let node of scene.nodes; trackBy: trackNode"
+      class="canvas-node"
+      [class.workflow-node]="node.kind === 'step'"
+      [class.selected]="node.step === selected && node.kind === 'step'"
+      [class.join-node]="node.kind === 'join'"
+      [class.terminal-node]="node.kind !== 'step'"
+      [class.node-invalid]="node.kind === 'step' && !!nodeErrors[node.key]"
+      [attr.data-node-id]="node.key"
+      [style.left.px]="node.x"
+      [style.top.px]="node.y"
+      (pointerdown)="startPointer($event, node)"
+      (keydown)="nudge($event, node)"
+      (dragstart)="$event.preventDefault()"
+    >
+      <ng-container [ngSwitch]="node.kind">
+        <div *ngSwitchCase="'trigger'" (click)="select($event, node)"><ng-content /></div>
+        <button
+          *ngSwitchCase="'handler'"
+          type="button"
+          class="terminal-label signal-entry"
+          (click)="select($event, node)"
+        >
+          <small>SIGNAL HANDLER</small><strong>{{ node.handler?.name || node.label }}</strong
+          ><code>{{ node.label }}</code>
+        </button>
+        <ng-container *ngSwitchCase="'step'">
+          <button
+            class="node-select"
+            type="button"
+            [attr.aria-label]="
+              'Edit ' +
+              (node.step!.name || node.key) +
+              (nodeErrors[node.key] ? ': Needs attention. ' + nodeErrors[node.key] : '')
+            "
+            [attr.aria-invalid]="nodeErrors[node.key] ? 'true' : null"
+            [title]="nodeErrors[node.key] || ''"
+            (click)="select($event, node)"
+          >
+            <span class="node-icon">{{ icon(node.step!) }}</span
+            ><small>{{
+              node.handlerId && node.step!.type === 'end'
+                ? 'Return from handler'
+                : labelForNode(node.step!)
+            }}</small
+            ><strong>{{ node.step!.name || node.key }}</strong
+            ><code>{{ node.key }}</code
+            ><span class="node-error-badge" *ngIf="nodeErrors[node.key]"
+              ><span aria-hidden="true">!</span> Needs attention</span
+            >
+          </button>
+          <div class="node-actions">
+            <button
+              type="button"
+              [disabled]="!editable"
+              [attr.aria-label]="'Move ' + (node.step!.name || node.key) + ' to another path'"
+              title="Change execution path"
+              (click)="moving = node.location"
+            >
+              <runloom-icon name="workflow" />
+            </button>
+            <button
+              type="button"
+              title="Duplicate"
+              [disabled]="!editable"
+              [attr.aria-label]="'Duplicate ' + (node.step!.name || node.key)"
+              (click)="duplicateNode.emit(node.location!)"
+            >
+              <runloom-icon name="copy" />
+            </button>
+            <button
+              type="button"
+              title="Delete"
+              [disabled]="!editable"
+              [attr.aria-label]="'Delete ' + (node.step!.name || node.key)"
+              (click)="deleteNode.emit(node.location!)"
+            >
+              <runloom-icon name="close" />
+            </button>
+          </div>
+        </ng-container>
+        <button
+          *ngSwitchDefault
+          class="terminal-label"
+          type="button"
+          (click)="select($event, node)"
+        >
+          {{ node.label }}
+        </button>
+      </ng-container>
+    </article>
+  </div>
+</div>
+<div class="move-notice" *ngIf="moving" role="status">
+  Choose a + connection to change this node's execution path.
+  <button type="button" (click)="moving = undefined">Cancel move</button>
+</div>
+<div class="canvas-controls">
+  <span>Drag nodes to position · Drag background to pan · Ctrl/⌘ + scroll to zoom</span>
+  <div>
+    <button type="button" class="text-control" [disabled]="!editable" (click)="autoLayout()">
+      Auto arrange
+    </button>
+    <button type="button" aria-label="Center canvas" title="Fit to view" (click)="center()">
+      <runloom-icon name="target" />
+    </button>
+    <button
+      type="button"
+      aria-label="Zoom out"
+      [disabled]="zoom <= 0.15"
+      (click)="changeZoom(-0.1)"
+    >
+      <runloom-icon name="minus" />
+    </button>
+    <button type="button" class="zoom-value" aria-label="Reset zoom to 100%" (click)="resetZoom()">
+      <output>{{ zoom * 100 | number: '1.0-0' }}%</output>
+    </button>
+    <button type="button" aria-label="Zoom in" [disabled]="zoom >= 2.5" (click)="changeZoom(0.1)">
+      <runloom-icon name="plus" />
+    </button>
+  </div>
+</div>

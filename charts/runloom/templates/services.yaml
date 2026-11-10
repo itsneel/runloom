@@ -1,0 +1,26 @@
+{{- $components := list "api" "ui" "workflows-ui" "management-ui" "platform-ui" "auth" "workflows" "management" "worker" }}
+{{- range $component := $components }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "runloom.fullname" $ }}-{{ $component }}
+  labels:
+    {{- include "runloom.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $component }}
+  {{- $annotations := deepCopy $.Values.service.annotations }}
+  {{- if eq $component "ui" }}{{- $annotations = mergeOverwrite $annotations $.Values.service.uiAnnotations }}{{- end }}
+  {{- with $annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ if eq $component "ui" }}{{ $.Values.service.uiType }}{{ else }}ClusterIP{{ end }}
+  selector:
+    app.kubernetes.io/instance: {{ $.Release.Name }}
+    app.kubernetes.io/component: {{ $component }}
+  ports:
+    - name: http
+      port: {{ if eq $component "ui" }}80{{ else if eq $component "worker" }}8081{{ else }}8080{{ end }}
+      targetPort: http
+{{- end }}

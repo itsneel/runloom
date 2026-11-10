@@ -1,0 +1,22 @@
+FROM golang:1.27.3@sha256:957861185dbf29d93668ace41e011d091c6e779953d47f0316ef2cc58e28fe2b AS build
+WORKDIR /src
+ENV GOWORK=off GOTOOLCHAIN=local GOPROXY=off
+COPY go.mod go.sum ./
+COPY vendor ./vendor
+COPY cmd ./cmd
+COPY internal ./internal
+RUN --network=none --mount=type=cache,target=/root/.cache/go-build CGO_ENABLED=0 go build -mod=vendor -trimpath -buildvcs=false -ldflags="-s -w" -o /out/runloom-workflows ./cmd/workflows && \
+    CGO_ENABLED=0 go build -mod=vendor -trimpath -buildvcs=false -ldflags="-s -w" -o /out/runloom-code ./cmd/code
+
+FROM gcr.io/distroless/static-debian12:nonroot@sha256:afa5c872c891853ca7fcf1f12c3edb23f7eeef36189728842dd51042ff57f7ab
+LABEL org.opencontainers.image.licenses="MIT"
+COPY LICENSE /usr/share/licenses/runloom/LICENSE
+COPY vendor/github.com/paralin/go-quickjs-wasi/LICENSE /usr/share/licenses/runloom/QuickJS-NG-LICENSE
+COPY vendor/github.com/tetratelabs/wazero/LICENSE /usr/share/licenses/runloom/wazero-LICENSE
+COPY vendor/github.com/go-sql-driver/mysql/LICENSE /usr/share/licenses/runloom/mysql-driver-LICENSE
+COPY vendor/filippo.io/edwards25519/LICENSE /usr/share/licenses/runloom/edwards25519-LICENSE
+COPY --from=build --chmod=0555 /out/runloom-workflows /runloom-workflows
+COPY --from=build --chmod=0555 /out/runloom-code /runloom-code
+USER 65532:65532
+EXPOSE 8080
+ENTRYPOINT ["/runloom-workflows"]

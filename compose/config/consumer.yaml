@@ -1,0 +1,6 @@
+{
+  "RUNLOOM_EXECUTION_AUDIENCE": "runloom-execution",
+  "RUNLOOM_KEYCLOAK_ADMIN_URL": "http://keycloak:8080/auth",
+  "RUNLOOM_KEYCLOAK_PROVISIONER_CLIENT_ID": "runloom-provisioner",
+  "RUNLOOM_KEYCLOAK_PROVISIONER_SECRET_FILE": "/run/secrets/runloom-provisioner"
+}

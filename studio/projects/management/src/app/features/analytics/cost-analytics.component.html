@@ -1,0 +1,328 @@
+<section aria-label="LLM cost analytics" [attr.aria-busy]="busy">
+  <div class="analytics-controls">
+    <div class="periods" role="group" aria-label="Spend period">
+      @for (range of periods; track range.id) {
+        <button
+          type="button"
+          [class.selected]="period === range.id"
+          [attr.aria-pressed]="period === range.id"
+          (click)="period = range.id; refresh()"
+        >
+          {{ range.label }}
+        </button>
+      }
+    </div>
+    <button class="refresh" type="button" [disabled]="busy" (click)="refresh()">
+      {{ busy ? 'Loading…' : 'Refresh' }}
+    </button>
+  </div>
+  <div class="scope-controls">
+    <label
+      >Team<select aria-label="Analytics team" [(ngModel)]="team" (ngModelChange)="refresh()">
+        <option value="">All accessible teams</option>
+        @for (option of teams; track option.id) {
+          <option [value]="option.id">{{ option.name }}</option>
+        }
+      </select></label
+    >
+    <label
+      >Run classification<select
+        aria-label="Analytics run classification"
+        [(ngModel)]="mode"
+        (ngModelChange)="refresh()"
+      >
+        <option value="all">All recorded runs</option>
+        <option value="production">Not marked as tests</option>
+        <option value="test">Marked tests only</option>
+      </select></label
+    >
+    <p>
+      <runloom-icon name="shield" />{{
+        auth.orgAdmin() ? 'Organization-wide access' : 'Only your authorized teams'
+      }}
+      · Read-only analytics
+    </p>
+  </div>
+  <p class="accounting-note">
+    Estimated USD, not an invoice. Each provider request is counted once, including retries and
+    child runs. Unknown and unpriced usage is never treated as free.
+  </p>
+  @if (error) {
+    <runloom-notice
+      [message]="error"
+      title="Analytics could not load"
+      tone="error"
+      [dismissible]="false"
+    /><button (click)="refresh()">Try again</button>
+  }
+  @if (busy) {
+    <div class="loading" role="status">Loading recorded spend across your permitted teams…</div>
+  }
+  @if (data; as report) {
+    <div class="range-caption">
+      <span
+        >{{ report.window.from | date: 'MMM d, y, HH:mm' : 'UTC' }} →
+        {{ report.window.until | date: 'MMM d, y, HH:mm' : 'UTC' }} UTC</span
+      ><span>By request start time · {{ report.window.bucket }} buckets</span>
+    </div>
+    <div class="kpi-grid">
+      <article class="kpi main-kpi">
+        <span>Estimated spend</span><strong>{{ spend(report.summary) }}</strong
+        ><small>{{ change }}</small>
+      </article>
+      <article class="kpi">
+        <span>Recorded tokens</span
+        ><strong>{{ report.summary.input_tokens + report.summary.output_tokens | number }}</strong
+        ><small
+          >{{ report.summary.input_tokens | number }} input ·
+          {{ report.summary.output_tokens | number }} output</small
+        >
+      </article>
+      <article class="kpi">
+        <span>Metered runs</span><strong>{{ report.summary.runs | number }}</strong
+        ><small>Runs with recorded LLM requests</small>
+      </article>
+      <article class="kpi">
+        <span>Average priced spend / run</span
+        ><strong>{{ money(report.summary.average_usd) }}</strong
+        ><small>Across {{ report.summary.priced_runs | number }} runs with priced requests</small>
+      </article>
+      <article class="kpi">
+        <span>Provider requests</span><strong>{{ report.summary.requests | number }}</strong
+        ><small
+          >{{ report.summary.retry_requests | number }} retries ·
+          {{ report.summary.failed_requests | number }} failed</small
+        >
+      </article>
+      <article class="kpi">
+        <span>Pricing coverage</span><strong>{{ coverage }}</strong
+        ><small
+          >{{ report.summary.priced | number }} of {{ report.summary.requests | number }} requests
+          priced</small
+        >
+      </article>
+    </div>
+    @if (report.summary.unknown + report.summary.unpriced + report.summary.pending > 0) {
+      <div class="coverage-note" role="status">
+        <strong>Spend is incomplete.</strong> {{ report.summary.unknown }} unknown ·
+        {{ report.summary.unpriced }} unpriced · {{ report.summary.pending }} pending. Totals
+        include only recorded estimates; configure pricing or reconcile unknown requests before
+        relying on them.
+      </div>
+    }
+    @if (report.summary.requests === 0) {
+      <div class="empty">
+        <runloom-icon name="analytics" />
+        <h2>No recorded LLM requests in this period</h2>
+        <p>
+          Try a longer date range or another team. This does not prove zero spend: older or
+          uninstrumented requests may be missing.
+        </p>
+      </div>
+    }
+    <section class="chart-card" aria-label="Spend trend">
+      <div class="card-heading">
+        <div>
+          <h2>Spend over time</h2>
+          <p>Estimated cost per {{ report.window.bucket }} · UTC</p>
+        </div>
+      <span class="legend">Bars: priced spend · Dot: incomplete usage</span>
+      </div>
+      <div class="chart-scroll">
+        <div
+          class="chart"
+          [style.grid-template-columns]="'repeat(' + report.trend.length + ', minmax(28px, 1fr))'"
+        >
+          @for (bucket of report.trend; track bucket.id; let index = $index) {
+            <div class="chart-column">
+              <div class="bar-space">
+                <div
+                  class="bar"
+                  [style.height.%]="barHeight(bucket)"
+                  [attr.title]="
+                    (bucket.id | date: 'MMM d, y, HH:mm' : 'UTC') +
+                    ' UTC: ' +
+                    spend(bucket) +
+                    '; ' +
+                    bucket.requests +
+                    ' requests'
+                  "
+                ></div>
+                @if (bucket.requests > bucket.priced) {
+                  <span class="incomplete-dot" title="This bucket includes incomplete usage"></span>
+                }
+              </div>
+              <span class="tick">{{
+                bucket.id
+                  | date
+                    : (report.window.bucket === 'month'
+                        ? 'MMM yy'
+                        : report.window.bucket === 'hour'
+                          ? 'HH:mm'
+                          : 'MMM d')
+                    : 'UTC'
+              }}</span>
+            </div>
+          }
+        </div>
+      </div>
+      <details class="trend-data">
+        <summary>View accessible trend data</summary>
+        <div class="table-scroll">
+          <table>
+            <caption>
+              All trend buckets, including incomplete and empty periods
+            </caption>
+            <thead>
+              <tr>
+                <th>Bucket start (UTC)</th>
+                <th>Estimated spend</th>
+                <th>Requests</th>
+                <th>Unpriced / unknown / pending</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (bucket of report.trend; track bucket.id) {
+                <tr>
+                  <td>{{ bucket.id | date: 'MMM d, y, HH:mm' : 'UTC' }}</td>
+                  <td>{{ spend(bucket) }}</td>
+                  <td>{{ bucket.requests }}</td>
+                  <td>{{ bucket.unpriced }} / {{ bucket.unknown }} / {{ bucket.pending }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </details>
+    </section>
+    <section class="breakdown-card" aria-label="Cost breakdown">
+      <div class="card-heading">
+        <div>
+          <h2>Where the spend goes</h2>
+          <p>
+            {{ report.total_rows | number }} {{ group }} · Sorted across all matching records, not
+            just this page
+          </p>
+        </div>
+        <div class="tabs" role="group" aria-label="Breakdown level">
+          @for (level of groups; track level) {
+            <button
+              [class.selected]="group === level"
+              [attr.aria-pressed]="group === level"
+              (click)="changeGroup(level)"
+            >
+              {{ level | titlecase }}
+            </button>
+          }
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <caption>
+            {{
+              group | titlecase
+            }}
+            — direct recorded spend, without parent/child double-counting
+          </caption>
+          <thead>
+            <tr>
+              <th [attr.aria-sort]="sortState('name')">
+                <button (click)="order('name')">
+                  {{
+                    group === 'runs'
+                      ? 'Workflow / run'
+                      : group === 'teams'
+                        ? 'Team'
+                        : 'Provider / model'
+                  }}
+                  <span aria-hidden="true">{{ sortMark('name') }}</span>
+                </button>
+              </th>
+              <th [attr.aria-sort]="sortState('cost')">
+                <button (click)="order('cost')">
+                  Estimated spend <span aria-hidden="true">{{ sortMark('cost') }}</span>
+                </button>
+              </th>
+              <th [attr.aria-sort]="sortState('requests')">
+                <button (click)="order('requests')">
+                  Requests <span aria-hidden="true">{{ sortMark('requests') }}</span>
+                </button>
+              </th>
+              <th [attr.aria-sort]="sortState('tokens')">
+                <button (click)="order('tokens')">
+                  Tokens <span aria-hidden="true">{{ sortMark('tokens') }}</span>
+                </button>
+              </th>
+              <th [attr.aria-sort]="sortState('runs')">
+                <button (click)="order('runs')">
+                  Runs <span aria-hidden="true">{{ sortMark('runs') }}</span>
+                </button>
+              </th>
+              <th>Coverage</th>
+              <th [attr.aria-sort]="sortState('latest')">
+                <button (click)="order('latest')">
+                  Last request <span aria-hidden="true">{{ sortMark('latest') }}</span>
+                </button>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of report.rows; track row.id) {
+              <tr>
+                <td>
+                  <strong>{{ row.name || 'Unknown workflow' }}</strong>
+                  @if (group === 'runs') {
+                    <small>{{ row.team_name }} · v{{ row.definition_version }}</small>
+                    <details>
+                      <summary>Run identifiers</summary>
+                      <code>{{ row.workflow_id }}</code
+                      ><code>{{ row.temporal_run_id }}</code>
+                    </details>
+                  }
+                </td>
+                <td class="spend">
+                  {{ spend(row) }}
+                  @if (row.priced > 0 && row.priced < row.requests) {
+                    <small>Partial estimate</small>
+                  }
+                </td>
+                <td>{{ row.requests | number }}</td>
+                <td>{{ row.input_tokens + row.output_tokens | number }}</td>
+                <td>{{ row.runs | number }}</td>
+                <td>
+                  <span class="coverage-pill" [class.partial]="row.priced < row.requests">{{
+                    row.requests
+                      ? ((100 * row.priced) / row.requests | number: '1.0-1') + '%'
+                      : 'No data'
+                  }}</span>
+                </td>
+                <td>
+                  {{
+                    row.last_request_at
+                      ? (row.last_request_at | date: 'MMM d, HH:mm' : 'UTC')
+                      : '—'
+                  }}<small>UTC</small>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="7" class="empty-row">No matching recorded requests.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <div class="pagination">
+        <span>Page {{ page + 1 }} of {{ lastPage }}</span
+        ><button [disabled]="page === 0 || busy" (click)="navigate(-1)">Previous</button
+        ><button [disabled]="page + 1 >= lastPage || busy" (click)="navigate(1)">Next</button>
+      </div>
+    </section>
+    <p class="footnote">
+      Only instrumented, recorded LLM requests are included. Tokens and prices are not backfilled.
+      Failed requests may still incur cost. Refresh to include new activity. Comparison:
+      {{ report.window.previous_from | date: 'MMM d, y, HH:mm' : 'UTC' }} →
+      {{ report.window.from | date: 'MMM d, y, HH:mm' : 'UTC' }} UTC.
+    </p>
+  }
+</section>

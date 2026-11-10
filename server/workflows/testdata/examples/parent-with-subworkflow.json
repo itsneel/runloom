@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0",
+  "kind": "main",
+  "id": "parent-with-subworkflow",
+  "name": "Parent with reusable greeting",
+  "trigger": { "type": "manual" },
+  "input_schema": { "type": "object", "required": ["name"], "properties": { "name": { "type": "string", "minLength": 1 } } },
+  "steps": [
+    { "id": "call-greeting", "name": "Prepare greeting", "type": "subworkflow", "definition_id": "reusable-greeting", "version": 1, "with": { "name": "${input.name}" }, "timeout_seconds": 3600 }
+  ],
+  "output": "${steps.call-greeting.output}"
+}

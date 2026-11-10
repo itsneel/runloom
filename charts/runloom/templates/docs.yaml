@@ -1,0 +1,145 @@
+{{- if eq (trimSuffix "/" .Values.docs.publicURL) (trimSuffix "/" .Values.auth.publicURL) }}
+{{- fail "docs.publicURL must be a separate origin from auth.publicURL" }}
+{{- end }}
+{{- if and .Values.docs.ingress.enabled (not .Values.docs.enabled) }}
+{{- fail "docs.ingress.enabled requires docs.enabled" }}
+{{- end }}
+{{- if .Values.docs.ingress.enabled }}
+{{- if empty .Values.docs.ingress.className }}{{ fail "docs.ingress.className is required" }}{{- end }}
+{{- if and .Values.docs.ingress.tls (ne (urlParse .Values.docs.publicURL).scheme "https") }}{{ fail "Documentation TLS requires an https docs.publicURL" }}{{- end }}
+{{- range .Values.docs.ingress.tls }}
+{{- if not (has (urlParse $.Values.docs.publicURL).hostname .hosts) }}{{ fail "Documentation TLS hosts must match docs.publicURL" }}{{- end }}
+{{- end }}
+{{- end }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "runloom.fullname" . }}-documentation
+  labels:
+    {{- include "runloom.labels" . | nindent 4 }}
+data:
+  documentation.json: {{ dict "url" .Values.docs.publicURL | toJson | quote }}
+  studio.json: {{ dict "studioUrl" .Values.auth.publicURL | toJson | quote }}
+{{- if .Values.docs.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "runloom.fullname" . }}-docs
+  labels:
+    {{- include "runloom.labels" . | nindent 4 }}
+    app.kubernetes.io/component: docs
+spec:
+  replicas: {{ .Values.docs.replicas }}
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: docs
+  template:
+    metadata:
+      labels:
+        {{- include "runloom.labels" . | nindent 8 }}
+        app.kubernetes.io/component: docs
+      annotations:
+        checksum/studio-origin: {{ .Values.auth.publicURL | sha256sum }}
+    spec:
+      automountServiceAccountToken: false
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101
+        runAsGroup: 101
+        fsGroup: 101
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: docs
+          image: {{ printf "%s:%s" .Values.docs.image.repository .Values.docs.image.tag | quote }}
+          imagePullPolicy: {{ .Values.docs.image.pullPolicy }}
+          ports: [{name: http, containerPort: 8080}]
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+          startupProbe:
+            httpGet: {path: /healthz, port: http}
+            periodSeconds: 2
+            failureThreshold: 30
+          livenessProbe:
+            httpGet: {path: /healthz, port: http}
+            timeoutSeconds: 3
+          readinessProbe:
+            httpGet: {path: /healthz, port: http}
+            timeoutSeconds: 3
+          resources:
+            {{- toYaml .Values.docs.resources | nindent 12 }}
+          volumeMounts:
+            - {name: tmp, mountPath: /tmp}
+            - {name: configuration, mountPath: /usr/share/nginx/html/studio.json, subPath: studio.json, readOnly: true}
+      volumes:
+        - name: tmp
+          emptyDir: {sizeLimit: 32Mi}
+        - name: configuration
+          configMap:
+            name: {{ include "runloom.fullname" . }}-documentation
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "runloom.fullname" . }}-docs
+  labels:
+    {{- include "runloom.labels" . | nindent 4 }}
+    app.kubernetes.io/component: docs
+spec:
+  type: ClusterIP
+  ports: [{name: http, port: 80, targetPort: http}]
+  selector:
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: docs
+{{- if .Values.docs.ingress.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "runloom.fullname" . }}-docs
+  labels:
+    {{- include "runloom.labels" . | nindent 4 }}
+  {{- with .Values.docs.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- with .Values.docs.ingress.className }}
+  ingressClassName: {{ . | quote }}
+  {{- end }}
+  {{- with .Values.docs.ingress.tls }}
+  tls:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  rules:
+    - host: {{ (urlParse .Values.docs.publicURL).hostname | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "runloom.fullname" . }}-docs
+                port: {name: http}
+{{- end }}
+{{- end }}

@@ -1,0 +1,15 @@
+# Opt-in. Install as a separate release, never as a Runloom app dependency.
+nginx:
+  enabled: false
+  controller:
+    nginxplus: false
+    enableCustomResources: false
+    enableSnippets: false
+    ingressClass:
+      name: runloom-nginx
+      create: true
+      setAsDefaultIngress: false
+    service:
+      type: LoadBalancer
+    telemetryReporting:
+      enable: false

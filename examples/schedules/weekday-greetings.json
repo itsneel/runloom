@@ -1,0 +1,9 @@
+{
+  "name": "Sample weekday customer and reviewer greetings",
+  "definition_id": "parent-with-two-subworkflows",
+  "version": 1,
+  "input": { "customer": "Avery", "reviewer": "Jordan" },
+  "cron": "0 9 * * 1-5",
+  "time_zone": "Asia/Kolkata",
+  "paused": true
+}

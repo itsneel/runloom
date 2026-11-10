@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "id": "javascript-transform",
+  "name": "Calculate an order total with JavaScript",
+  "description": "Map JSON into an isolated JavaScript node and pass its result to End.",
+  "trigger": { "type": "manual" },
+  "input_schema": {
+    "type": "object", "required": ["items"],
+    "properties": {
+      "items": { "type": "array", "items": {
+        "type": "object", "required": ["price", "quantity"],
+        "properties": { "price": { "type": "number", "minimum": 0 }, "quantity": { "type": "integer", "minimum": 1 } }
+      } }
+    }
+  },
+  "steps": [
+    {
+      "id": "total", "name": "Calculate total", "type": "code",
+      "code": {
+        "runtime": "quickjs-ng-0.11.0-v1",
+        "source": "const total = input.items.reduce((sum, item) => sum + item.price * item.quantity, 0);\nreturn { total: Math.round(total * 100) / 100, itemCount: input.items.length };"
+      },
+      "with": { "items": "${input.items}" }
+    },
+    { "id": "done", "type": "end", "with": { "order": "${steps.total.output}" } }
+  ],
+  "output": null
+}

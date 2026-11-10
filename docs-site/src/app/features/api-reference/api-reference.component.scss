@@ -1,0 +1,41 @@
+.api-reference {
+  margin-top: 40px;
+  padding-top: 28px;
+  border-top: 1px solid var(--line);
+}
+.contract-heading {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+h2 {
+  font-size: 22px;
+  margin: 10px 0;
+  letter-spacing: -0.5px;
+}
+p {
+  color: var(--muted);
+  line-height: 1.8;
+  font-size: 13px;
+}
+.destination {
+  display: block;
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+iframe {
+  width: 100%;
+  height: 700px;
+  margin-top: 24px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: white;
+}
+docs-icon {
+  width: 15px;
+  height: 15px;
+}

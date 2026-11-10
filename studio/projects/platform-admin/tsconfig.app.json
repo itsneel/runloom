@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": []
+  },
+  "files": ["src/main.ts", "src/app/federation/entry.ts"],
+  "include": ["src/**/*.d.ts"],
+  "exclude": ["**/*.spec.ts"]
+}

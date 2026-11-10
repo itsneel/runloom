@@ -1,0 +1,30 @@
+<section class="api-reference" aria-labelledby="contract-heading">
+  <div class="contract-heading">
+    <div>
+      <div class="eyebrow">OpenAPI contract</div>
+      <h2 id="contract-heading">Explore the {{ api() }} API</h2>
+    </div>
+    <a class="secondary" [href]="'/generated/contracts/' + api() + '.json'" download
+      >Download JSON<docs-icon name="code"
+    /></a>
+  </div>
+  <p>
+    This embedded reference is read-only. To authenticate or send requests, open Swagger on your own
+    installation. Those requests can change real data.
+  </p>
+  <a
+    class="primary"
+    [href]="settings.studioUrl() + '/api/docs/' + api() + '/'"
+    target="_blank"
+    rel="noopener noreferrer"
+    >Open installed Swagger<docs-icon name="external" /></a
+  ><span class="destination"
+    >{{ settings.studioUrl() }} · Change using Studio connection in the header.</span
+  ><iframe
+    [src]="source()"
+    [title]="api() + ' OpenAPI reference'"
+    loading="lazy"
+    sandbox="allow-scripts allow-same-origin"
+    referrerpolicy="no-referrer"
+  ></iframe>
+</section>

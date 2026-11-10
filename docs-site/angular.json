@@ -1,0 +1,51 @@
+{
+  "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
+  "version": 1,
+  "cli": { "analytics": false, "packageManager": "npm" },
+  "projects": {
+    "runloom-docs": {
+      "projectType": "application",
+      "root": "",
+      "sourceRoot": "src",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:application",
+          "options": {
+            "outputPath": "dist/runloom-docs",
+            "index": "src/index.html",
+            "browser": "src/main.ts",
+            "server": "src/main.server.ts",
+            "outputMode": "static",
+            "tsConfig": "tsconfig.app.json",
+            "inlineStyleLanguage": "scss",
+            "assets": [
+              { "glob": "**/*", "input": "public" },
+              { "glob": "LICENSE", "input": ".", "output": "/" }
+            ],
+            "styles": ["src/app/shared/styles/global.scss"]
+          },
+          "configurations": {
+            "production": {
+              "outputHashing": "all",
+              "extractLicenses": true,
+              "budgets": [
+                { "type": "initial", "maximumWarning": "400kB", "maximumError": "500kB" },
+                { "type": "anyComponentStyle", "maximumWarning": "16kB", "maximumError": "24kB" }
+              ]
+            },
+            "development": { "optimization": false, "sourceMap": true, "extractLicenses": false }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular/build:dev-server",
+          "configurations": {
+            "development": { "buildTarget": "runloom-docs:build:development" },
+            "production": { "buildTarget": "runloom-docs:build:production" }
+          },
+          "defaultConfiguration": "development"
+        }
+      }
+    }
+  }
+}

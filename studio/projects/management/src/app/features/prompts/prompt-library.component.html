@@ -1,0 +1,278 @@
+<runloom-notice *ngIf="error && !draft" [message]="error" tone="error" (dismissed)="error = ''" />
+<runloom-notice *ngIf="notice" [message]="notice" tone="success" (dismissed)="notice = ''" />
+<p class="empty" *ngIf="!teamId">Choose a team to browse its prompt library.</p>
+<ng-container *ngIf="teamId">
+  <div class="metrics" aria-label="Prompt library summary">
+    <div class="metric">
+      <small>Team prompts</small><strong>{{ entries.length }}</strong>
+    </div>
+    <div class="metric">
+      <small>With published versions</small><strong>{{ publishedCount }}</strong>
+    </div>
+    <div class="metric">
+      <small>Unpublished drafts</small><strong>{{ draftCount }}</strong>
+    </div>
+  </div>
+  <div class="toolbar">
+    <label class="search"
+      >Search prompts<input
+        type="search"
+        [(ngModel)]="search"
+        (ngModelChange)="page = 0"
+        placeholder="Search name, ID, description or tags"
+    /></label>
+    <label
+      >Status<select [(ngModel)]="status" (ngModelChange)="page = 0">
+        <option value="all">All prompts</option>
+        <option value="published">Published</option>
+        <option value="draft">Unpublished drafts</option>
+      </select></label
+    >
+    <label>Tag<select aria-label="Filter prompt tag" [(ngModel)]="tag" (ngModelChange)="page = 0">
+      <option value="">All tags</option>
+      <option *ngFor="let value of availableTags" [value]="value">{{ value }}</option>
+    </select></label>
+    <button type="button" [disabled]="loading || busy" (click)="load()">Refresh library</button>
+    <button class="primary" type="button" [disabled]="!auth.canEdit() || busy" (click)="create()">
+      New prompt
+    </button>
+  </div>
+  <section class="panel" [attr.aria-busy]="loading">
+    <div class="panel-heading">
+      <h2>Team prompt library</h2>
+      <span class="muted">{{ loading ? 'Loading prompts…' : filtered.length + ' prompts' }}</span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th
+              [attr.aria-sort]="sort === 'name' ? (ascending ? 'ascending' : 'descending') : 'none'"
+            >
+              <button (click)="setSort('name')">
+                Prompt {{ sort === 'name' ? (ascending ? '↑' : '↓') : '' }}
+              </button>
+            </th>
+            <th>Status</th>
+            <th>Tags</th>
+            <th>Latest version</th>
+            <th>Inputs</th>
+            <th
+              [attr.aria-sort]="
+                sort === 'updated' ? (ascending ? 'ascending' : 'descending') : 'none'
+              "
+            >
+              <button (click)="setSort('updated')">
+                Updated {{ sort === 'updated' ? (ascending ? '↑' : '↓') : '' }}
+              </button>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let entry of rows" [class.selected]="draft?.id === entry.id">
+            <td>
+              <button class="link" [disabled]="busy" (click)="open(entry.id)">
+                {{ entry.name }}</button
+              ><small>{{ entry.description || entry.id }}</small>
+            </td>
+            <td>
+              <span
+                class="badge"
+                [class.success]="entry.published"
+                [class.warning]="!entry.published"
+                >{{ entry.published ? 'Published' : 'Draft changes' }}</span
+              >
+            </td>
+            <td><div class="prompt-tags" *ngIf="entry.tags?.length; else noTags"><span class="prompt-tag" *ngFor="let value of entry.tags">{{ value }}</span></div><ng-template #noTags><span class="muted">—</span></ng-template></td>
+            <td>{{ entry.version ? 'v' + entry.version : 'Not published' }}</td>
+            <td>{{ entry.template.variables.length }}</td>
+            <td>
+              {{ entry.updated_at | date: 'medium' }}<small>{{ entry.actor }}</small>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="empty" *ngIf="!loading && !filtered.length">
+      {{
+        entries.length
+          ? 'No prompts match your filters.'
+          : 'No prompts yet. Create a reusable prompt for your team.'
+      }}
+    </p>
+    <div class="pagination">
+      <span>Page {{ page + 1 }} of {{ pages }}</span
+      ><button [disabled]="page === 0" (click)="page = page - 1">Previous prompts</button
+      ><button [disabled]="page + 1 >= pages" (click)="page = page + 1">Next prompts</button>
+    </div>
+  </section>
+  <section
+    class="panel"
+    *ngIf="draft as entry"
+    aria-label="Library prompt editor"
+    #editorPanel
+    tabindex="-1"
+    [attr.aria-busy]="busy"
+  >
+    <div class="panel-heading">
+      <div>
+        <h2>{{ entry.name || 'New prompt' }}</h2>
+        <p class="muted">
+          {{ entry.revision ? 'Revision ' + entry.revision : 'New draft'
+          }}{{ dirty ? ' · Unsaved changes' : '' }}
+        </p>
+      </div>
+      <div class="actions">
+        <button [disabled]="busy" (click)="close()">Close editor</button
+        ><button [disabled]="busy || !auth.canEdit()" (click)="save(false)">Save draft</button
+        ><button class="primary" [disabled]="busy || !auth.canEdit()" (click)="save(true)">
+          Publish prompt
+        </button>
+      </div>
+    </div>
+    <runloom-notice *ngIf="error" title="Prompt action failed" [message]="error" tone="error" (dismissed)="error = ''" />
+    <div class="detail-grid">
+      <fieldset [disabled]="busy || !auth.canEdit()">
+        <div class="two-fields">
+          <label>Prompt name<input aria-label="Prompt name" [ngModel]="entry.name" (ngModelChange)="renamePrompt($event)" maxlength="120"
+            [attr.aria-invalid]="!!fieldErrors['name']" [attr.aria-describedby]="fieldErrors['name'] ? 'prompt-name-error' : null" />
+            <span *ngIf="fieldErrors['name']" id="prompt-name-error" class="field-error" role="alert">{{ fieldErrors['name'] }}</span></label
+          ><label
+            >Prompt ID<input
+              aria-label="Prompt ID"
+              [ngModel]="entry.id"
+              (ngModelChange)="editID($event)"
+              [attr.aria-invalid]="!!fieldErrors['id']"
+              [attr.aria-describedby]="fieldErrors['id'] ? 'prompt-id-help prompt-id-error' : 'prompt-id-help'"
+              [disabled]="entry.revision > 0"
+              placeholder="customer-summary"
+          /><small id="prompt-id-help">Generated automatically. You can customize it before the first save.</small>
+            <span *ngIf="fieldErrors['id']" id="prompt-id-error" class="field-error" role="alert">{{ fieldErrors['id'] }}</span></label>
+        </div>
+        <label
+          >Description<textarea
+            [(ngModel)]="entry.description"
+            rows="2"
+            maxlength="1000"
+          ></textarea>
+        </label>
+        <label>Tags<input aria-label="Prompt tags" [(ngModel)]="tagsInput" placeholder="support, billing, onboarding"
+          [attr.aria-invalid]="!!fieldErrors['tags']" [attr.aria-describedby]="fieldErrors['tags'] ? 'prompt-tags-help prompt-tags-error' : 'prompt-tags-help'" />
+          <small id="prompt-tags-help">Separate tags with commas. Up to 20 tags, 40 characters each. Tags are saved in lowercase.</small>
+          <span *ngIf="fieldErrors['tags']" id="prompt-tags-error" class="field-error" role="alert">{{ fieldErrors['tags'] }}</span>
+        </label>
+        <label
+          >System instructions<textarea
+            aria-label="System instructions"
+            class="code"
+            [(ngModel)]="entry.template.instructions"
+            [attr.aria-invalid]="!!fieldErrors['instructions']"
+            [attr.aria-describedby]="fieldErrors['instructions'] ? 'prompt-instructions-error' : null"
+            rows="5"
+          ></textarea>
+          <span *ngIf="fieldErrors['instructions']" id="prompt-instructions-error" class="field-error" role="alert">{{ fieldErrors['instructions'] }}</span>
+        </label>
+        <label
+          >Prompt template<textarea
+            aria-label="Prompt template"
+            #promptText
+            class="code"
+            [(ngModel)]="entry.template.text"
+            [attr.aria-invalid]="!!fieldErrors['text']"
+            [attr.aria-describedby]="fieldErrors['text'] ? 'prompt-text-error' : null"
+            rows="10"
+          ></textarea>
+          <span *ngIf="fieldErrors['text']" id="prompt-text-error" class="field-error" role="alert">{{ fieldErrors['text'] }}</span>
+        </label>
+        <div class="actions">
+          <button
+            type="button"
+            *ngFor="let variable of entry.template.variables"
+            (click)="insertVariable(variable, promptText)"
+          >
+            Insert {{ variable.name }}
+          </button>
+        </div>
+        <div class="notice">
+          Use &#36;&#123;vars.name&#125; for typed inputs. Workflow nodes map their data to these
+          inputs separately. Published versions never change existing workflows automatically.
+        </div>
+        <div class="panel-heading input-heading">
+          <h3>Typed inputs</h3>
+          <button [disabled]="entry.template.variables.length >= 50" (click)="addVariable()">
+            Add input
+          </button>
+        </div>
+        <article class="variable" *ngFor="let variable of entry.template.variables; let i = index">
+          <div class="two-fields">
+            <label
+              >Input name<input
+                [ngModel]="variable.name"
+                (change)="rename(variable, $any($event.target).value)" /></label
+            ><label
+              >Input type<select [(ngModel)]="variable.type">
+                <option *ngFor="let type of types" [value]="type">{{ type }}</option>
+              </select></label
+            >
+          </div>
+          <label>Input description<input [(ngModel)]="variable.description" /></label>
+          <label class="checkbox"
+            ><input type="checkbox" [(ngModel)]="defaultEnabled[i]" /> Provide default value</label
+          >
+          <label *ngIf="defaultEnabled[i]"
+            >Default value (text for strings, JSON otherwise)<input [(ngModel)]="defaults[i]"
+          /></label>
+          <div class="actions">
+            <label class="checkbox"
+              ><input type="checkbox" [(ngModel)]="variable.required" /> Required</label
+            ><button (click)="removeVariable(i)">Remove input {{ variable.name }}</button>
+          </div>
+        </article>
+        <details>
+          <summary>Preview with sample inputs</summary>
+          <div class="stack">
+            <p class="muted">
+              Preview renders the template without an LLM call or cost. Test with a model from a
+              workflow node so its project budget applies.
+            </p>
+            <label
+              >Sample inputs (JSON)<textarea
+                class="code"
+                [(ngModel)]="samples"
+                rows="5"
+              ></textarea></label
+            ><button (click)="render()">Preview prompt</button>
+          </div>
+        </details>
+      </fieldset>
+      <aside class="stack" aria-label="Prompt version history">
+        <h3>Version & revision history</h3>
+        <p class="muted">
+          Saving records a revision. Publishing creates an immutable version you can pin in an LLM
+          node.
+        </p>
+        <p class="error" role="alert" *ngIf="historyError">{{ historyError }}</p>
+        <p class="muted" *ngIf="!history.length">Save this prompt to begin its history.</p>
+        <article class="revision" *ngFor="let revision of history">
+          <strong
+            >{{ revision.published ? 'Published v' + revision.version : 'Draft' }} · r{{
+              revision.revision
+            }}</strong
+          ><small>{{ revision.updated_at | date: 'medium' }} · {{ revision.actor }}</small>
+          <div class="prompt-tags" *ngIf="revision.tags?.length"><span class="prompt-tag" *ngFor="let value of revision.tags">{{ value }}</span></div>
+          <details>
+            <summary>View revision</summary>
+            <pre>{{ revision.template | json }}</pre>
+          </details>
+          <button [disabled]="busy || !auth.canEdit()" (click)="copyRevision(revision)">
+            Copy revision to draft
+          </button>
+        </article>
+      </aside>
+      <section class="stack full-width" *ngIf="preview">
+        <h3>Rendered preview</h3>
+        <pre>{{ preview }}</pre>
+      </section>
+    </div>
+  </section>
+</ng-container>

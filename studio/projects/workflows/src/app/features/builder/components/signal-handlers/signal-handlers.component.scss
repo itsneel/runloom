@@ -1,0 +1,57 @@
+:host {
+  display: block;
+  background: var(--rl-surface);
+  border-bottom: 1px solid var(--rl-border);
+}
+.signal-handlers {
+  max-height: 210px;
+  overflow: auto;
+  padding: 10px 16px;
+  font-size: 12px;
+}
+summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+p,
+small {
+  color: var(--rl-muted);
+  line-height: 1.6;
+}
+.handler,
+.add-handler {
+  display: flex;
+  gap: 12px;
+  align-items: end;
+  margin: 10px 0;
+  flex-wrap: wrap;
+}
+label {
+  display: grid;
+  gap: 4px;
+  flex: 1;
+  min-width: 180px;
+}
+input {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid var(--rl-border);
+  border-radius: 6px;
+  background: var(--rl-surface);
+  color: var(--rl-text);
+}
+button {
+  padding: 8px 12px;
+  border: 1px solid var(--rl-border);
+  border-radius: 6px;
+  background: var(--rl-surface);
+  color: var(--rl-text);
+  cursor: pointer;
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.error {
+  color: var(--rl-danger);
+}

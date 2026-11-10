@@ -1,0 +1,46 @@
+<fieldset [disabled]="!editable">
+  <ng-container *ngIf="step.type === 'foreach'; else dataFields">
+    <ng-container *ngIf="step.foreach as loop">
+      <label>Items<input aria-label="For Each items" [ngModel]="display(loop.items)" (ngModelChange)="loop.items = value($event); changed.emit()" /></label>
+      <label>Concurrent items<input aria-label="For Each concurrency" type="number" min="1" max="10" [(ngModel)]="loop.concurrency" (ngModelChange)="changed.emit()" /></label>
+      <label>Result per item<input aria-label="For Each result" [ngModel]="display(loop.output)" (ngModelChange)="loop.output = value($event); changed.emit()" /></label>
+      <button type="button" (click)="addBodyNode.emit()">Add node to loop body</button>
+      <p>Use <code>$&#123;loop.item&#125;</code> and <code>$&#123;loop.index&#125;</code> inside the body. Results retain input order. Up to 100 items and 1,000 body-node executions. A failed item stops the loop; completed external actions are not undone. Nested loops and End are not allowed inside the body.</p>
+    </ng-container>
+  </ng-container>
+  <ng-template #dataFields>
+    <ng-container *ngIf="step.data">
+      <label *ngIf="step.type !== 'transform'">Operation<select aria-label="Data operation" [ngModel]="data.operation" (ngModelChange)="setOperation($event)"><option *ngFor="let op of operations" [value]="op">{{ op }}</option></select></label>
+      <label>Source<input aria-label="Data source" [ngModel]="display(data.source)" (ngModelChange)="data.source = value($event); changed.emit()" /></label>
+      <ng-container *ngIf="step.type === 'transform'">
+        <label class="check"><input type="checkbox" [(ngModel)]="data.keep_source" (ngModelChange)="changed.emit()" />Keep original fields</label>
+        <section *ngFor="let field of data.fields; let i = index">
+          <label>Field name<input [attr.aria-label]="'Mapping name ' + (i + 1)" [(ngModel)]="field.name" (ngModelChange)="changed.emit()" /></label>
+          <label>Value or expression<input [attr.aria-label]="'Mapping value ' + (i + 1)" [ngModel]="display(field.value)" (ngModelChange)="field.value = value($event); changed.emit()" /></label>
+          <label>Convert to<select [(ngModel)]="field.type" (ngModelChange)="changed.emit()"><option *ngFor="let type of conversions" [value]="type">{{ type || 'Keep type' }}</option></select></label>
+          <label class="check"><input type="checkbox" [(ngModel)]="field.use_default" (ngModelChange)="changed.emit()" />Default if missing or null</label>
+          <label *ngIf="field.use_default">Default<input [ngModel]="display(field.default)" (ngModelChange)="field.default = value($event); changed.emit()" /></label>
+          <button type="button" (click)="removeField(i)">Remove field</button>
+        </section>
+        <button type="button" (click)="addField()">Add field</button>
+        <p>Field names use lowercase letters, digits and hyphens. Use <code>$&#123;item.field&#125;</code> for source fields. Values accept JSON literals or expressions; quote text such as "true" to keep it as text.</p>
+      </ng-container>
+      <ng-container *ngIf="data.operation === 'filter' && data.predicate as predicate">
+        <label>Left value<input aria-label="Filter left" [ngModel]="display(predicate.left)" (ngModelChange)="predicate.left = value($event); changed.emit()" /></label>
+        <label>Comparison<select [(ngModel)]="predicate.operator" (ngModelChange)="changed.emit()"><option *ngFor="let op of comparisons" [value]="op">{{ op }}</option></select></label>
+        <label *ngIf="predicate.operator !== 'exists'">Right value<input aria-label="Filter right" [ngModel]="display(predicate.right)" (ngModelChange)="predicate.right = value($event); changed.emit()" /></label>
+        <p>Use <code>$&#123;item.field&#125;</code> to reference each record.</p>
+      </ng-container>
+      <label *ngIf="['sort','unique','sum','split','compare','join'].includes(data.operation)">Field path<input aria-label="Data key" [(ngModel)]="data.key" (ngModelChange)="changed.emit()" placeholder="customer.id" /></label>
+      <label *ngIf="data.operation === 'sort'" class="check"><input type="checkbox" [(ngModel)]="data.descending" (ngModelChange)="changed.emit()" />Descending order</label>
+      <label *ngIf="data.operation === 'limit'">Maximum items<input type="number" min="0" max="1000" [(ngModel)]="data.limit" (ngModelChange)="changed.emit()" /></label>
+      <label *ngIf="['append','join','compare'].includes(data.operation)">Other array<input aria-label="Other array" [ngModel]="display(data.other)" (ngModelChange)="data.other = value($event); changed.emit()" /></label>
+      <label *ngIf="data.operation === 'join'">Other array field path<input aria-label="Other key" [(ngModel)]="data.other_key" (ngModelChange)="changed.emit()" /></label>
+      <p *ngIf="data.operation === 'join'">Inner join: each match returns a left and right record. Duplicate keys produce multiple matches.</p>
+      <p *ngIf="data.operation === 'compare'">Returns source records whose key is absent from the other array. Leave the field path blank to compare whole records.</p>
+      <p *ngIf="step.type !== 'transform'">Arrays are limited to 1,000 items. Results must fit within 256 KiB. Missing fields and invalid conversions fail explicitly.</p>
+    </ng-container>
+  </ng-template>
+  <details><summary>Advanced JSON configuration</summary><textarea aria-label="Data configuration JSON" rows="10" [ngModel]="json" (ngModelChange)="setJSON($event)"></textarea></details>
+  <p role="alert" *ngIf="draft !== null">Invalid JSON. Fix this configuration before saving or testing.</p>
+</fieldset>

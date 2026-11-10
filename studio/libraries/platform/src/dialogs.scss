@@ -1,0 +1,24 @@
+:host { display: contents; }
+dialog {
+  box-sizing: border-box; width: min(480px, calc(100vw - 32px)); max-height: calc(100dvh - 32px);
+  padding: 28px; border: 1px solid var(--rl-border); border-radius: 18px; color: var(--rl-ink);
+  background: var(--rl-surface); box-shadow: var(--rl-shadow-overlay); font: 14px/1.55 var(--rl-font);
+}
+dialog::backdrop { background: color-mix(in srgb, var(--rl-scrim) 45%, transparent); backdrop-filter: blur(4px); }
+.dialog-heading { display: flex; gap: 12px; align-items: center; }
+.dialog-icon { display: grid; place-items: center; flex: 0 0 36px; height: 36px; border-radius: 10px; background: var(--rl-soft); color: var(--rl-accent); font-size: 20px; font-weight: 700; }
+.dialog-icon.danger { background: var(--rl-soft); color: var(--rl-danger); }
+h2 { margin: 0; font-size: 20px; line-height: 1.3; }
+p { margin: 18px 0; color: var(--rl-secondary); overflow-wrap: anywhere; }
+label { display: block; margin-bottom: 6px; font-weight: 600; }
+input { box-sizing: border-box; width: 100%; padding: 11px 12px; border: 1px solid var(--rl-muted); border-radius: 8px; font: inherit; }
+.actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; margin-top: 26px; }
+button { min-height: 42px; padding: 9px 18px; border: 1px solid var(--rl-border); border-radius: 8px; background:var(--rl-surface); color: var(--rl-accent); font: inherit; font-weight: 600; cursor: pointer; }
+button:hover { background: var(--rl-soft); }
+button.primary { background: var(--rl-accent); border-color: var(--rl-accent); color:var(--rl-on-accent); }
+button.primary:hover { background: var(--rl-accent-hover); }
+button.primary.danger { background: var(--rl-danger); border-color: var(--rl-danger); }
+button.primary.danger:hover { background: var(--rl-danger); }
+button:focus-visible, input:focus-visible { outline: 3px solid var(--rl-accent); outline-offset: 3px; }
+.error { color: var(--rl-danger); margin: 8px 0 0; font-size: 13px; }
+@media (max-width: 420px) { dialog { padding: 22px; } .actions button { flex: 1; } }

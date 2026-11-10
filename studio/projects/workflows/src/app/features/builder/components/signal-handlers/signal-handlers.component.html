@@ -1,0 +1,52 @@
+<details #panel class="signal-handlers" [open]="!!definition.signal_handlers?.length">
+  <summary>Signal handler paths ({{ definition.signal_handlers?.length || 0 }})</summary>
+  <p>
+    Receive events while the main flow continues. Each handler has its own action path below the
+    main canvas. Return ends that handler; finishing the main flow drains received events and closes
+    the workflow.
+  </p>
+  <div class="handler" *ngFor="let handler of definition.signal_handlers">
+    <label
+      >Event name<input
+        [attr.data-handler-id]="handler.id"
+        [attr.aria-label]="'Signal handler event ' + handler.id"
+        [disabled]="!editable || saving"
+        [(ngModel)]="handler.signal_name"
+        (ngModelChange)="edit(handler)"
+    /></label>
+    <label
+      >Label<input
+        [attr.aria-label]="'Signal handler label ' + handler.id"
+        maxlength="120"
+        [disabled]="!editable || saving"
+        [(ngModel)]="handler.name"
+        (ngModelChange)="changed.emit()"
+    /></label>
+    <button
+      type="button"
+      [disabled]="!editable || saving"
+      [attr.aria-label]="'Remove signal handler ' + handler.signal_name"
+      (click)="remove(handler)"
+    >
+      Remove
+    </button>
+  </div>
+  <div class="add-handler">
+    <label
+      >New event name<input
+        aria-label="New signal handler event"
+        placeholder="customer.updated"
+        [disabled]="!editable || saving"
+        [(ngModel)]="eventName"
+        (keydown.enter)="$event.preventDefault(); add()" /></label
+    ><button type="button" [disabled]="!editable || saving || !eventName.trim()" (click)="add()">
+      Add signal handler
+    </button>
+  </div>
+  <p class="error" *ngIf="error" role="alert">{{ error }}</p>
+  <small
+    >Use <code>signal.payload</code>, <code>signal.actor</code> and <code>signal.name</code> in
+    action mappings. To change payload validation, edit the handler’s <code>input_schema</code> in
+    workflow JSON.</small
+  >
+</details>

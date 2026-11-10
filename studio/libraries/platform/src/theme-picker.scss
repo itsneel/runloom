@@ -1,0 +1,12 @@
+:host { display:block; }
+    button { font:inherit; cursor:pointer; border:0; border-radius:8px; display:flex; align-items:center; gap:10px; }
+    .trigger { width:100%; padding:10px; background:transparent; color:var(--rl-nav-text); font-size:12px; text-align:left; }
+    .trigger:hover { background:var(--rl-nav-hover); }
+    .trigger.compact { justify-content:center; min-height:42px; gap:0; }
+    small { margin-left:auto; color:var(--rl-nav-muted); text-transform:capitalize; font-size:10px; }
+    [popover] { position:fixed; top:auto; right:auto; margin:0; width:204px; box-sizing:border-box; padding:10px; border:1px solid var(--rl-border); border-radius:12px; background:var(--rl-surface); color:var(--rl-ink); box-shadow:var(--rl-shadow-overlay); }
+    strong { display:block; padding:5px 8px 10px; font-size:12px; }
+    [popover] button { width:100%; padding:10px 8px; background:transparent; color:var(--rl-secondary); font-size:13px; }
+    [popover] button span:first-of-type { flex:1; text-align:left; }
+    [popover] button:hover, [aria-pressed='true'] { background:var(--rl-accent-soft) !important; color:var(--rl-accent) !important; }
+    p { margin:10px 8px 4px; color:var(--rl-muted); font-size:11px; }

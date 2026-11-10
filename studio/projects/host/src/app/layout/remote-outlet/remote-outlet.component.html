@@ -1,0 +1,5 @@
+@if (loading) { <p class="loading" role="status">Loading {{ kind === 'workflows' ? 'Workflow Studio' : 'Management' }}…</p> }
+@if (error) {
+  <section class="failure"><runloom-notice [message]="error" tone="error" [dismissible]="false" /><button type="button" (click)="mount()">Retry application</button></section>
+}
+<ng-container #outlet />

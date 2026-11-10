@@ -1,0 +1,17 @@
+# Optional rotation overlay on the independent services stack. Key bytes are
+# mounted, never supplied as environment variables or image build arguments.
+services:
+  workflows:
+    configs:
+      - {source: runloom-payload-security, target: /etc/runloom/config.d/30-security.yaml}
+    secrets: [payload-keyring]
+  worker:
+    configs:
+      - {source: runloom-payload-security, target: /etc/runloom/config.d/30-security.yaml}
+    secrets: [payload-keyring]
+configs:
+  runloom-payload-security:
+    file: ${RUNLOOM_PAYLOAD_SECURITY_CONFIG_PATH:-./compose/config/payload-security.yaml}
+secrets:
+  payload-keyring:
+    file: ${RUNLOOM_PAYLOAD_KEYRING_PATH:?Set the path to a persistent execution JSON keyring}

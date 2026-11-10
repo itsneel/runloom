@@ -1,0 +1,39 @@
+{
+  "schema_version": "1.0",
+  "kind": "main",
+  "id": "parent-with-two-subworkflows",
+  "name": "Greet a customer and reviewer",
+  "trigger": { "type": "manual" },
+  "input_schema": {
+    "type": "object",
+    "required": ["customer", "reviewer"],
+    "properties": {
+      "customer": { "type": "string", "minLength": 1 },
+      "reviewer": { "type": "string", "minLength": 1 }
+    }
+  },
+  "steps": [
+    {
+      "id": "greet-customer",
+      "name": "Greet customer",
+      "type": "subworkflow",
+      "definition_id": "reusable-greeting",
+      "version": 1,
+      "with": { "name": "${input.customer}" },
+      "timeout_seconds": 3600
+    },
+    {
+      "id": "greet-reviewer",
+      "name": "Greet reviewer",
+      "type": "subworkflow",
+      "definition_id": "reusable-greeting",
+      "version": 1,
+      "with": { "name": "${input.reviewer}" },
+      "timeout_seconds": 3600
+    }
+  ],
+  "output": {
+    "customer": "${steps.greet-customer.output.message}",
+    "reviewer": "${steps.greet-reviewer.output.message}"
+  }
+}

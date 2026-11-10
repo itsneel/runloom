@@ -1,0 +1,28 @@
+{{- $external := .Values.workflowSecrets.externalSecret | default dict }}
+{{- if and .Values.development.enabled (not .Values.workflowSecrets.existingSecret) (not $external.enabled) }}
+{{- $name := include "runloom.workflowSecret" . }}
+{{- $existing := lookup "v1" "Secret" .Release.Namespace $name }}
+{{- $key := "" }}
+{{- if $existing }}
+{{- $key = index $existing.data .Values.workflowSecrets.secretKey | default "" }}
+{{- if ne (len (b64dec $key)) 32 }}
+{{- fail "Existing development workflow key is invalid. Restore the original 32-byte key; do not rotate it implicitly." }}
+{{- end }}
+{{- else }}
+{{- if lookup "apps/v1" "Deployment" .Release.Namespace (printf "%s-workflows" (include "runloom.fullname" .)) }}
+{{- fail "Workflow encryption key is missing from an existing installation. Restore the original Secret; refusing to generate a replacement key." }}
+{{- end }}
+{{- $key = randBytes 32 }}
+{{- end }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "runloom.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/resource-policy: keep
+type: Opaque
+data:
+  {{ .Values.workflowSecrets.secretKey | quote }}: {{ $key | quote }}
+{{- end }}

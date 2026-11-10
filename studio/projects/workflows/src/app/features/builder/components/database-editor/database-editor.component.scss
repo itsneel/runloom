@@ -1,0 +1,78 @@
+:host {
+  display: block;
+}
+fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.9rem;
+  min-width: 0;
+}
+label {
+  display: grid;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+}
+input,
+select,
+textarea {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--rl-surface, #1c2330);
+  color: var(--rl-ink, #e3e7ee);
+  border: 1px solid var(--rl-border, #394154);
+  border-radius: 8px;
+  padding: 0.65rem;
+  font: inherit;
+}
+textarea {
+  font-family: ui-monospace, monospace;
+  resize: vertical;
+}
+.two-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.7rem;
+}
+.schema-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+}
+button {
+  padding: 0.6rem 0.8rem;
+  border-radius: 8px;
+  border: 1px solid var(--rl-border, #394154);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.hint,
+aside {
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: var(--rl-muted, #a0a8b9);
+  margin: 0;
+}
+aside {
+  margin-top: 1rem;
+  padding: 0.8rem;
+  border: 1px solid var(--rl-border, #394154);
+  border-radius: 8px;
+}
+h4 {
+  margin: 0;
+}
+.error {
+  color: var(--rl-danger, #e78b92);
+  font-size: 0.85rem;
+}
+small {
+  color: var(--rl-muted, #a0a8b9);
+}

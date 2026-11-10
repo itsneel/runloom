@@ -1,0 +1,66 @@
+<div [attr.aria-label]="'Child limit for ' + organization.name">
+  @if (state.organization?.child_limit; as policy) {
+    <div class="summary">
+      <div>
+        <strong>{{ organization.child_count }} / {{ policy.max_children }} children</strong
+        ><small>{{
+          policy.override === null ? 'Platform default' : 'Organization override'
+        }}</small>
+      </div>
+      @if (canConfigure && !state.editing) {
+        <button
+          type="button"
+          [disabled]="disabled || state.busy"
+          (click)="state.edit()"
+          [attr.aria-label]="'Edit child limit for ' + organization.name"
+        >
+          Edit limit
+        </button>
+      }
+    </div>
+    @if (state.editing && canConfigure) {
+      <form (ngSubmit)="save()">
+        <label
+          >Limit source<select
+            aria-label="Child limit source"
+            name="source"
+            [(ngModel)]="state.mode"
+            [disabled]="state.busy || disabled"
+          >
+            <option value="default">
+              Use platform default ({{ policy.default_max_children }})
+            </option>
+            <option value="custom">Organization override</option>
+          </select></label
+        >
+        @if (state.mode === 'custom') {
+          <label
+            >Maximum children<input
+              aria-label="Organization child limit"
+              name="limit"
+              type="number"
+              min="0"
+              max="10"
+              step="1"
+              [(ngModel)]="state.limit"
+              [disabled]="state.busy || disabled"
+              required
+          /></label>
+        }
+        <small>Zero blocks new children. Existing children are preserved.</small>
+        @if (state.error) {
+          <p role="alert">{{ state.error }}</p>
+        }
+        <div class="actions">
+          <button type="submit" [disabled]="state.busy || disabled">
+            {{ state.busy ? 'Saving…' : 'Save child limit' }}</button
+          ><button type="button" [disabled]="state.busy || disabled" (click)="state.cancel()">
+            Cancel
+          </button>
+        </div>
+      </form>
+    }
+  } @else {
+    <small>Child organization · No children allowed</small>
+  }
+</div>

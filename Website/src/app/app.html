@@ -1,0 +1,468 @@
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="nav-wrap">
+    <a class="brand" href="#" aria-label="Runloom home"
+      ><span class="brand-symbol"><site-icon name="flow" /></span>Run<span
+        class="brand-light"
+        >loom</span
+      ></a
+    >
+    <button
+      class="menu-toggle"
+      type="button"
+      (click)="mobileMenu.set(!mobileMenu())"
+      [attr.aria-expanded]="mobileMenu()"
+      aria-controls="navigation"
+      aria-label="Toggle navigation"
+    >
+      <site-icon [name]="mobileMenu() ? 'close' : 'menu'" />
+    </button>
+    <nav
+      id="navigation"
+      aria-label="Main navigation"
+      [class.open]="mobileMenu()"
+      (click)="mobileMenu.set(false)"
+    >
+      <a href="#platform">The platform</a
+      ><a href="#playground">See it in action</a
+      ><a href="#developers">For developers</a><a href="#questions">FAQs</a>
+      @if (config.studioUrl) {
+        <a class="button secondary" [href]="config.studioUrl">Log in</a>
+      }
+      <a class="button nav-cta" href="#start"
+        >Get started <site-icon name="external"
+      /></a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <section class="hero section-wrap" aria-labelledby="hero-title">
+    <div class="eyebrow-pill">
+      <span class="tiny-dot"></span> OPEN SOURCE. OPEN POSSIBILITIES.
+    </div>
+    <h1 id="hero-title">
+      Turn your process<br />into
+      <span class="accent-word"
+        >progress.<svg
+          viewBox="0 0 380 18"
+          preserveAspectRatio="none"
+          aria-hidden="true"
+        >
+          <path d="M3 13Q180-4 377 8" /></svg
+      ></span>
+    </h1>
+    <p class="hero-description">
+      Bring people, AI, and systems into one clear workflow.<br
+        class="desktop-break"
+      />
+      Design it visually. Define it in JSON. Let Temporal carry it forward.
+    </p>
+    <div class="hero-actions">
+      <a class="button primary" href="#playground"
+        >See how it flows <site-icon name="arrow" /></a
+      ><a class="button secondary" href="#platform">Explore the platform</a>
+    </div>
+    <div class="hero-notes">
+      <span><site-icon name="check" /> Visual by design</span
+      ><span><site-icon name="check" /> Durable by default</span
+      ><span><site-icon name="check" /> Yours to host</span>
+    </div>
+  </section>
+
+  <section
+    id="playground"
+    class="playground section-wrap"
+    aria-label="Interactive workflow demonstration"
+  >
+    <div class="demo-topbar">
+      <div class="demo-title">
+        <span class="window-dots" aria-hidden="true"><i></i><i></i><i></i></span
+        ><site-icon name="flow" /><strong>The workflow playground</strong>
+      </div>
+      <span class="demo-label">BROWSER-ONLY DEMO</span>
+    </div>
+    <div class="demo-toolbar">
+      <div class="scenario-picker" role="group" aria-label="Workflow examples">
+        @for (item of scenarios; track item.id; let index = $index) {<button
+          type="button"
+          [class.selected]="selected() === index"
+          [attr.aria-pressed]="selected() === index"
+          (click)="selectScenario(index)"
+        >
+          {{ item.name }}</button
+        >}
+      </div>
+      <button
+        class="code-toggle"
+        type="button"
+        [attr.aria-expanded]="jsonVisible()"
+        aria-controls="definition-panel"
+        (click)="jsonVisible.set(!jsonVisible())"
+      >
+        <site-icon name="code" />{{ jsonVisible() ? 'View canvas' : 'View JSON'
+        }}
+      </button>
+    </div>
+    <div class="canvas" [class.show-code]="jsonVisible()">
+      <div class="canvas-caption">
+        <span class="canvas-tag">{{ scenario().name }}</span>
+        <p>{{ scenario().description }}</p>
+      </div>
+      @if (!jsonVisible()) {
+      <div
+        class="node-chain"
+        role="group"
+        aria-label="Select a step to learn more"
+      >
+        @for (node of scenario().nodes; track $index; let index = $index) {
+        <button
+          class="workflow-node"
+          type="button"
+          [class.chosen]="inspecting() === index"
+          [class.active]="stage() === index"
+          [class.done]="stage() > index"
+          [class.gate-node]="index === 2"
+          [attr.aria-pressed]="inspecting() === index"
+          (click)="inspecting.set(index)"
+        >
+          <span
+            class="node-icon"
+            [class.trigger-icon]="index === 0"
+            [class.end-icon]="index === 4"
+            ><site-icon [name]="stage() > index ? 'check' : node.icon"
+          /></span>
+          <span class="node-name">{{ node.label }}</span
+          ><span class="node-kind">{{ node.kind }}</span>
+          <span class="node-port left" aria-hidden="true"></span
+          ><span class="node-port right" aria-hidden="true"></span>
+        </button>
+        @if (index < 4) {
+        <div
+          class="connector"
+          [class.passed]="stage() > index"
+          aria-hidden="true"
+        >
+          <span></span><b>›</b>
+        </div>
+        } }
+      </div>
+      <div class="node-explanation">
+        <span class="inspection-dot"></span>
+        <p>{{ scenario().nodes[inspecting()].detail }}</p>
+      </div>
+      } @else {
+      <div class="json-panel" id="definition-panel">
+        <div>
+          <span>workflow.json <em>Draft definition</em></span
+          ><button type="button" (click)="copyJSON()">
+            <site-icon name="copy" />Copy JSON
+          </button>
+        </div>
+        <pre
+          tabindex="0"
+          aria-label="Example JSON workflow definition"
+        ><code>{{ json() }}</code></pre>
+        <span class="copy-message" role="status">{{ copyMessage() }}</span>
+      </div>
+      }
+    </div>
+    <div class="demo-controls">
+      <div class="demo-status" role="status" aria-live="polite">
+        <span
+          [class.waiting]="stage() === 2"
+          [class.success]="stage() === 5"
+          [class.working]="running()"
+        ></span>
+        <p>{{ message() }}</p>
+      </div>
+      <div class="demo-buttons">
+        @if (stage() >= 0) {<button
+          class="reset-button"
+          type="button"
+          (click)="reset()"
+        >
+          Reset</button
+        >}@if (stage() === 2) {<button
+          class="button primary small"
+          type="button"
+          (click)="continueDemo()"
+        >
+          {{ scenario().action }} <site-icon name="arrow" /></button
+        >} @else {<button
+          class="button primary small"
+          type="button"
+          [disabled]="running()"
+          (click)="start()"
+        >
+          <site-icon name="play" />{{ running() ? 'Running…' : stage() === 5 ?
+          'Run again' : 'Run the demo' }}</button
+        >}
+      </div>
+    </div>
+    <p class="demo-footnote">
+      An illustration, not a live execution. No API requests, AI calls, or
+      account needed.
+    </p>
+  </section>
+
+  <div class="foundation section-wrap">
+    <span
+      >A simple definition.<br /><strong>A dependable foundation.</strong></span
+    >
+    <div><span class="tech-mark temporal-mark">T</span>Temporal</div>
+    <div><site-icon name="code" /><span>JSON definitions</span></div>
+    <div><span class="tech-mark">Go</span>Go runtime</div>
+    <div><span class="tech-mark angular-mark">A</span>Angular studio</div>
+  </div>
+
+  <section
+    id="platform"
+    class="platform section-wrap"
+    aria-labelledby="platform-title"
+  >
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">LESS CHASING. MORE CREATING.</p>
+        <h2 id="platform-title">
+          The whole process.<br />Finally on the same page.
+        </h2>
+      </div>
+      <p>
+        From the first input to the final handoff,<br class="desktop-break" />
+        make the next step clear for everyone.
+      </p>
+    </div>
+    <div class="feature-grid">
+      <article class="feature-card visual-card">
+        <span class="feature-icon"><site-icon name="flow" /></span>
+        <h3>Think in steps,<br />not in scripts.</h3>
+        <p>
+          Build on a visual canvas with guided settings. Activities, conditions,
+          and parallel paths turn your process into a shared picture.
+        </p>
+        <div class="mini-canvas" aria-hidden="true">
+          <span class="mini-block"><site-icon name="bolt" /></span><i></i
+          ><span class="mini-block violet"><site-icon name="flow" /></span>
+          <div class="mini-branch">
+            <span><site-icon name="person" /></span
+            ><span><site-icon name="check" /></span>
+          </div>
+        </div>
+        <span class="feature-caption">VISUAL BUILDER + EDITABLE JSON</span>
+      </article>
+      <article class="feature-card durable-card">
+        <span class="feature-icon"><site-icon name="clock" /></span>
+        <h3>Built for the work<br />between the steps.</h3>
+        <p>
+          A five-minute timer. A next-day approval. A callback from another
+          system. Temporal keeps the execution durable while the world catches
+          up.
+        </p>
+        <div class="waiting-illustration" aria-hidden="true">
+          <span class="time-line"></span
+          ><span class="time-point checked"><site-icon name="check" /></span
+          ><span class="time-point current"><site-icon name="clock" /></span
+          ><span class="time-point future"></span
+          ><span class="wait-label">Waiting is part of the workflow.</span>
+        </div>
+        <span class="feature-caption"
+          >TIMERS · CALLBACKS · SIGNALS · RESUME</span
+        >
+      </article>
+      <article class="feature-card compact-card">
+        <span class="feature-icon"><site-icon name="spark" /></span>
+        <div>
+          <h3>AI, with a human say.</h3>
+          <p>
+            Add an AI/LLM step, then a human approval. Connect your configured
+            model provider while keeping credentials out of workflow
+            definitions.
+          </p>
+        </div>
+      </article>
+      <article class="feature-card compact-card">
+        <span class="feature-icon"><site-icon name="layers" /></span>
+        <div>
+          <h3>A history you can follow.</h3>
+          <p>
+            Save drafts, publish immutable versions, and inspect inputs,
+            results, and audits. Restore an earlier definition as a new draft.
+          </p>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="how-section" aria-labelledby="how-title">
+    <div class="section-wrap">
+      <div class="center-heading">
+        <p class="eyebrow">FROM “WHAT IF” TO “WHAT'S NEXT”</p>
+        <h2 id="how-title">Three steps. One shared flow.</h2>
+      </div>
+      <ol class="how-steps">
+        <li>
+          <span class="step-number">01</span>
+          <h3>Make the process visible</h3>
+          <p>
+            Choose your steps, connect the logic, and define the inputs. Work
+            visually or open the JSON.
+          </p>
+        </li>
+        <li>
+          <span class="step-number">02</span>
+          <h3>Publish a clear starting point</h3>
+          <p>
+            Validate the definition and publish a numbered version. Each run
+            keeps its own definition snapshot.
+          </p>
+        </li>
+        <li>
+          <span class="step-number">03</span>
+          <h3>Run it. See it. Keep moving.</h3>
+          <p>
+            Start a run, follow its status, and respond to approvals or pauses.
+            Find the outcome in run history.
+          </p>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <section
+    id="developers"
+    class="developer-section section-wrap"
+    aria-labelledby="developer-title"
+  >
+    <div class="developer-copy">
+      <p class="eyebrow">FRIENDLY ON THE SURFACE. OPEN UNDERNEATH.</p>
+      <h2 id="developer-title">
+        A visual language<br />your whole team<br />can build on.
+      </h2>
+      <p>
+        Non-technical teammates get a canvas. Developers get a constrained JSON
+        contract, a Go runtime, and an HTTP API. One definition connects the
+        two.
+      </p>
+      <div class="developer-point">
+        <site-icon name="shield" />
+        <div>
+          <strong>The right access, for the right team.</strong>
+          <p>
+            Organizations and teams with admin, editor, and viewer roles.
+            Server-side permissions protect team workflows.
+          </p>
+        </div>
+      </div>
+      <div class="developer-point">
+        <site-icon name="code" />
+        <div>
+          <strong>Your data. Your infrastructure.</strong>
+          <p>
+            Choose PostgreSQL or MongoDB for workflow records. Extend
+            capabilities with registered Go activities.
+          </p>
+        </div>
+      </div>
+      <a class="text-link" href="#start"
+        >Build on your terms <site-icon name="arrow"
+      /></a>
+    </div>
+    <div class="code-card">
+      <div class="code-header">
+        <span><i></i> workflow-api.http</span><span>REST API</span>
+      </div>
+      <div class="code-body">
+        <p class="code-comment"># Start a published workflow</p>
+        <p><b>POST</b> /api/v1/studio/runs</p>
+        <pre>
+{{ '{\n  "definition_id": "onboarding",\n  "version": 1,\n  "input": { "name": "Alex" }\n}' }}</pre>
+        <p class="code-comment"># Follow the execution</p>
+        <p>
+          <b class="get">GET</b> /api/v1/studio/runs/<span>{{ '{workflow_id}' }}</span>
+        </p>
+        <p class="code-comment"># Request cancellation</p>
+        <p><b>POST</b> /api/v1/studio/runs/<span>{{ '{workflow_id}' }}</span>/cancel</p>
+      </div>
+      <div class="code-footer">
+        <site-icon name="shield" /><span
+          >Verified access token + team ID required.<br />Cancellation is
+          asynchronous.</span
+        >
+      </div>
+    </div>
+  </section>
+
+  <section
+    id="questions"
+    class="faq-section section-wrap"
+    aria-labelledby="faq-title"
+  >
+    <div>
+      <p class="eyebrow">A FEW GOOD QUESTIONS</p>
+      <h2 id="faq-title">Before you<br />go with the flow.</h2>
+      <p>Clear expectations are<br />part of a good workflow, too.</p>
+    </div>
+    <div class="questions">
+      @for (faq of faqs; track faq.question) {
+      <details>
+        <summary>{{ faq.question }}<span aria-hidden="true">+</span></summary>
+        <p>{{ faq.answer }}</p>
+      </details>
+      }
+    </div>
+  </section>
+
+  <section
+    id="start"
+    class="start-section section-wrap"
+    aria-labelledby="start-title"
+  >
+    <div class="start-orbit" aria-hidden="true"><site-icon name="flow" /></div>
+    <p class="eyebrow">YOUR PROCESS. YOUR POSSIBILITIES.</p>
+    <h2 id="start-title">What will you<br />set in motion?</h2>
+    <p>
+      Start with one process. Make it visible.<br />Build something your whole
+      team can follow.
+    </p>
+    <div class="start-actions">
+      @if (config.studioUrl) {<a class="button light" [href]="config.studioUrl"
+        >Open workflow studio <site-icon name="external" /></a
+      >} @else {<a class="button light" href="#playground"
+        >Try a workflow first <site-icon name="arrow" /></a
+      >}@if (config.repositoryUrl) {<a
+        class="button outline-light"
+        [href]="config.repositoryUrl"
+        >Get the source <site-icon name="code" /></a
+      >}
+    </div>
+    <div class="setup-note">
+      <site-icon name="code" />
+      <p>
+        <strong>Self-host the full product</strong><br />Use the repository's
+        README.md for Go, Angular, Temporal, identity, and database setup. This
+        website runs independently.
+      </p>
+    </div>
+  </section>
+</main>
+
+<footer class="section-wrap">
+  <div class="footer-top">
+    <a class="brand" href="#"
+      ><span class="brand-symbol"><site-icon name="flow" /></span>Run<span
+        class="brand-light"
+        >loom</span
+      ></a
+    >
+    <p>Good work deserves a clear path.</p>
+    <nav aria-label="Footer navigation">
+      <a href="#platform">Platform</a><a href="#developers">Developers</a
+      ><a href="#questions">FAQs</a><a href="LICENSE">MIT license</a>
+    </nav>
+  </div>
+  <div class="footer-bottom">
+    <span>© 2026 Runloom contributors</span
+    ><span>Open-source project. Self-hostable by design.</span>
+  </div>
+</footer>

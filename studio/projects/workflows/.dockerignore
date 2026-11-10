@@ -1,0 +1,41 @@
+# Allow only build inputs; local caches, screenshots and app configuration stay out.
+**
+!package.json
+!package-lock.json
+!vendor/
+!vendor/*.tgz
+!angular.json
+!tsconfig.json
+!tsconfig.app.json
+!webpack.config.cjs
+!index-transform.cjs
+!license-compat.cjs
+!LICENSE
+!src/
+!src/**
+!public/
+!public/**
+!tests/
+!tests/boundaries.mjs
+!nginx.conf
+!nginx-main.conf
+# Exclude test sources; the build's boundary check is the sole exception.
+**/*.spec.ts
+**/*.test.ts
+**/*.test.js
+**/*.test.mjs
+**/tests/**
+**/__tests__/**
+!tests/boundaries.mjs
+# Never send local credentials or private keys, even under an allowed tree.
+**/.env
+**/.env.*
+**/.npmrc
+**/.netrc
+**/*.key
+**/*.pem
+**/*.p12
+**/*.pfx
+**/id_rsa*
+**/id_ed25519*
+**/.git

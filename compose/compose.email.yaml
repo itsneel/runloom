@@ -1,0 +1,12 @@
+# Opt-in external SMTP. Password is mounted only into the worker.
+services:
+  worker:
+    configs:
+      - {source: runloom-email, target: /etc/runloom/config.d/30-email.yaml}
+    secrets: [smtp-password]
+configs:
+  runloom-email:
+    file: ${RUNLOOM_EMAIL_CONFIG_PATH:?Set the path to your SMTP configuration YAML}
+secrets:
+  smtp-password:
+    file: ${RUNLOOM_SMTP_PASSWORD_PATH:?Set the path to the SMTP password file}

@@ -1,0 +1,51 @@
+{{- $port := default "80" (trimPrefix ":" (regexFind ":[0-9]+$" ((urlParse .Values.auth.publicURL).host))) -}}
+{{- if .Values.development.enabled }}
+Development stack: Temporal/Keycloak development servers and public credentials are not production infrastructure.
+Register in the studio and read verification emails via:
+  kubectl --context <your-cluster-context> -n {{ .Release.Namespace }} port-forward svc/{{ include "runloom.fullname" . }}-mailpit 8025:8025
+  http://localhost:8025
+{{- else }}
+External Temporal, database credentials, and Keycloak client/SMTP configuration must be provisioned.
+{{- end }}
+
+{{ if .Values.localSetup.managed -}}
+Local Make prepared the database server, URL/token Secrets and trust ConfigMap.
+The Helm database-setup Job provisioned and verified owner-restricted databases, including Assistant when enabled, before server deployment.
+Repeated make k8s-up / k8s-upgrade preserves these credentials and application data.
+{{ else -}}
+Direct Helm installs require database/credential prerequisites; enable databaseSetup to provision owner databases during installation.
+For automatic local kind setup, use make k8s-up without K8S_SERVICE_VALUES.
+{{ end -}}
+The gateway does not mount credentials. The local setup database is managed outside this Helm release.
+See charts/runloom/README.md for prerequisites, service-account provisioning and upgrade notes.
+{{- $autoscaling := false }}
+{{- range .Values.autoscaling.workloads }}{{- if .enabled }}{{- $autoscaling = true }}{{- end }}{{- end }}
+{{ if $autoscaling }}
+HPA is enabled. A working resource metrics API (normally Metrics Server) is required.
+  kubectl --context <your-cluster-context> -n {{ .Release.Namespace }} get hpa,pdb
+{{ end }}
+{{ if .Values.ingress.enabled }}
+Ingress host: {{ .Values.ingress.host }}. Ensure the ingress controller, DNS and TLS Secret are configured.
+{{ end }}
+{{ if .Values.databaseSetup.enabled }}
+Inspect the startup Job (retained for one day):
+  kubectl --context <your-cluster-context> -n {{ .Release.Namespace }} logs job/{{ include "runloom.fullname" . }}-database-setup
+{{ end }}
+
+Open the studio:
+{{- if or .Values.ingress.enabled (not (regexMatch "^http://(localhost|127[.]0[.]0[.]1)(:[0-9]+)?$" .Values.auth.publicURL)) }}
+  {{ .Values.auth.publicURL }}
+  Ensure external routing and DNS/TLS are configured. This chart does not install an ingress controller.
+{{- else }}
+  kubectl --context <your-cluster-context> -n {{ .Release.Namespace }} port-forward svc/{{ include "runloom.fullname" . }}-ui {{ $port }}:80
+  {{ .Values.auth.publicURL }}
+{{- end }}
+
+Check health through the UI proxy:
+  curl --fail {{ .Values.auth.publicURL }}/api/v1/health
+
+Test UI-to-API connectivity:
+  helm test {{ .Release.Name }} --kube-context <your-cluster-context> -n {{ .Release.Namespace }}
+
+Bundled identity and Temporal PVCs are retained after uninstall. External application databases are operator-managed.
+Back up all databases and the persistent workflow-vault key before upgrades.

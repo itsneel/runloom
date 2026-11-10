@@ -1,0 +1,89 @@
+.article-heading {
+  margin-bottom: 30px;
+}
+h1 {
+  font-size: clamp(30px, 3.4vw, 43px);
+  line-height: 1.18;
+  letter-spacing: -1.5px;
+  margin: 14px 0;
+}
+.install-tabs {
+  display: flex;
+  gap: 26px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 26px;
+}
+.install-tabs a {
+  font-size: 13px;
+  text-decoration: none;
+  color: var(--muted);
+  padding: 0 0 13px;
+  border-bottom: 2px solid transparent;
+}
+.install-tabs a.selected {
+  color: var(--accent);
+  border-color: var(--accent);
+  font-weight: 600;
+}
+.source-note {
+  border-top: 1px solid var(--line);
+  padding-top: 20px;
+  margin-top: 38px;
+  font-size: 11px;
+  line-height: 1.8;
+  color: var(--muted);
+}
+.technical-reference {
+  margin-top: 28px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 18px 20px;
+}
+.technical-reference summary {
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+}
+.technical-reference summary span {
+  display: block;
+  margin: 6px 0 0 17px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
+}
+.technical-reference[open] summary {
+  margin-bottom: 24px;
+}
+.article-pagination {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  border-top: 1px solid var(--line);
+  margin-top: 32px;
+  padding-top: 24px;
+}
+.article-pagination a {
+  text-decoration: none;
+  color: var(--text);
+  max-width: 48%;
+}
+.article-pagination small {
+  display: block;
+  font-size: 11px;
+  margin-bottom: 8px;
+  color: var(--muted);
+}
+.article-pagination strong {
+  font-size: 12px;
+  font-weight: 600;
+}
+.article-pagination a:hover strong {
+  color: var(--accent);
+}
+.next {
+  text-align: right;
+}
+.page-aside a.nested {
+  padding-left: 22px;
+  font-size: 10px;
+}

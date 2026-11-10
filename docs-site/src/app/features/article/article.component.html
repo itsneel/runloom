@@ -1,0 +1,83 @@
+<div class="page-grid">
+  <div class="page-content">
+    <div class="breadcrumbs">
+      <a routerLink="/">Documentation</a><span>/</span><span>{{ page().group }}</span>
+    </div>
+    <header class="article-heading">
+      <div class="eyebrow">{{ page().group }}</div>
+      <h1>{{ page().title === 'Docker Compose' ? 'Run Runloom locally' : page().title }}</h1>
+    </header>
+    @if (
+      page().slug === 'getting-started/docker-compose' ||
+      page().slug === 'getting-started/kubernetes'
+    ) {
+      <nav class="install-tabs" aria-label="Installation method">
+        <a
+          routerLink="/getting-started/docker-compose"
+          [class.selected]="page().slug.endsWith('docker-compose')"
+          [attr.aria-current]="page().slug.endsWith('docker-compose') ? 'page' : null"
+          >Docker Compose</a
+        ><a
+          routerLink="/getting-started/kubernetes"
+          [class.selected]="page().slug.endsWith('kubernetes')"
+          [attr.aria-current]="page().slug.endsWith('kubernetes') ? 'page' : null"
+          >Kubernetes</a
+        >
+      </nav>
+    }
+    <div class="prose" [innerHTML]="rendered()" (click)="interact($event)"></div>
+    @if (article().reference) {
+      <details
+        class="technical-reference"
+        [open]="referenceOpen()"
+        (toggle)="toggleReference($event)"
+      >
+        <summary>Full technical reference <span>Configuration, examples and limits</span></summary>
+        <div class="prose" [innerHTML]="renderedReference()" (click)="interact($event)"></div>
+      </details>
+    }
+    <p class="sr-only" role="status">{{ copied() }}</p>
+    @if (page().api; as api) {
+      <docs-api-reference [api]="api" />
+    }
+    @if (page().source) {
+      <p class="source-note">
+        <a [href]="'/generated/sources/' + page().source">Source reference</a> · Check details
+        against your installed version.
+      </p>
+    }
+    <nav class="article-pagination" aria-label="Adjacent articles">
+      @if (previous; as previous) {
+        <a [routerLink]="'/' + previous.slug"
+          ><small>← Previous article</small><strong>{{ previous.title }}</strong></a
+        >
+      } @else {
+        <a routerLink="/"><small>← Back to</small><strong>Documentation home</strong></a>
+      }
+      @if (next; as next) {
+        <a class="next" [routerLink]="'/' + next.slug"
+          ><small>Next article →</small><strong>{{ next.title }}</strong></a
+        >
+      }
+    </nav>
+  </div>
+  <aside class="page-aside">
+    <div class="aside-sticky">
+      <h2>On this page</h2>
+      @for (heading of headings(); track heading.id) {
+        <a
+          [routerLink]="'/' + page().slug"
+          [fragment]="heading.id"
+          [class.nested]="heading.depth === 3"
+          [class.active]="activeHeading() === heading.id"
+          >{{ heading.text }}</a
+        >
+      }
+      <div class="aside-help">
+        <h2>Need a hand?</h2>
+        <p>Find common setup and workflow issues.</p>
+        <a routerLink="/operations/troubleshooting">Troubleshooting →</a>
+      </div>
+    </div>
+  </aside>
+</div>

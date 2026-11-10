@@ -1,0 +1,44 @@
+{{- /* References only: never look up or print secret contents during rendering. */ -}}
+{{- if .Values.ingress.enabled -}}
+{{- if empty .Values.ingress.className -}}{{- fail "ingress.className is required when ingress.enabled=true; use the installed controller's class" -}}{{- end -}}
+{{- $host := regexReplaceAll ":[0-9]+$" (urlParse .Values.auth.publicURL).host "" -}}
+{{- if ne (lower $host) .Values.ingress.host -}}{{- fail "ingress.host must match the hostname in auth.publicURL" -}}{{- end -}}
+{{- if and .Values.ingress.tls (ne (urlParse .Values.auth.publicURL).scheme "https") -}}{{- fail "Ingress TLS requires an https auth.publicURL" -}}{{- end -}}
+{{- range .Values.ingress.tls -}}
+{{- if not (has $.Values.ingress.host .hosts) -}}{{- fail "Ingress TLS hosts must include ingress.host" -}}{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- if and (not .Values.development.enabled) (not (include "runloom.workflowSecret" .)) -}}{{- fail "Hosted execution requires workflowSecrets.existingSecret or externalSecret configuration" -}}{{- end -}}
+{{- if ne (empty .Values.temporal.tls.certKey) (empty .Values.temporal.tls.keyKey) -}}{{- fail "temporal.tls.certKey and keyKey must be supplied together" -}}{{- end -}}
+{{- if and .Values.temporal.tls.certKey (or (not .Values.temporal.tls.enabled) (not .Values.temporal.tls.existingSecret)) -}}{{- fail "Temporal client authentication requires TLS enabled and an existing Secret" -}}{{- end -}}
+{{- if and .Values.temporal.tls.existingSecret (not (or .Values.temporal.tls.caKey .Values.temporal.tls.certKey)) -}}{{- fail "Temporal TLS Secret requires a CA or certificate key" -}}{{- end -}}
+{{- $names := dict -}}
+{{- $secrets := dict -}}
+{{- range $owner := list "auth" "workflows" "management" -}}
+{{- $db := index $.Values.splitServices.databases $owner -}}
+{{- if hasKey $names $db.name -}}{{- fail "Each service must have its own database name" -}}{{- end -}}
+{{- if hasKey $secrets $db.existingSecret -}}{{- fail "Each service must have its own database Secret" -}}{{- end -}}
+{{- $_ := set $names $db.name true -}}
+{{- $_ := set $secrets $db.existingSecret true -}}
+{{- end -}}
+{{- range $component, $override := .Values.autoscaling.workloads -}}
+{{- if $override.enabled -}}
+{{- $hpa := mergeOverwrite (deepCopy $.Values.autoscaling.defaults) $override -}}
+{{- if gt (int $hpa.minReplicas) (int $hpa.maxReplicas) -}}{{- fail (printf "autoscaling %s: minReplicas must not exceed maxReplicas" $component) -}}{{- end -}}
+{{- if not (or $hpa.targetCPUUtilizationPercentage $hpa.targetMemoryUtilizationPercentage) -}}{{- fail (printf "autoscaling %s requires at least one resource metric" $component) -}}{{- end -}}
+{{- $settings := index $.Values $component -}}
+{{- if has $component (list "auth" "workflows" "management") -}}{{- $settings = mergeOverwrite (deepCopy $.Values.splitServices.resources) (index $.Values.splitServices $component) -}}{{- end -}}
+{{- range $resource, $target := dict "cpu" $hpa.targetCPUUtilizationPercentage "memory" $hpa.targetMemoryUtilizationPercentage -}}
+{{- if $target -}}
+{{- $request := index ($settings.resources.requests | default dict) $resource | default "" | toString -}}
+{{- if or (eq $request "") (regexMatch "^0+(\\.0+)?([a-zA-Z]+)?$" $request) -}}{{- fail (printf "autoscaling %s requires a nonzero %s resource request" $component $resource) -}}{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- $tokens := dict -}}
+{{- range $role := list "auth" "workflows" "management" "worker" -}}
+{{- $name := index $.Values.splitServices.credentials $role -}}
+{{- if hasKey $tokens $name -}}{{- fail "Each workload must have its own service-token Secret" -}}{{- end -}}
+{{- $_ := set $tokens $name true -}}
+{{- end -}}

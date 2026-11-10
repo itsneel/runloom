@@ -1,0 +1,137 @@
+<fieldset [disabled]="!editable">
+  <label
+    >Connection<select
+      aria-label="Database connection"
+      [(ngModel)]="op.connection_id"
+      (ngModelChange)="connectionChanged()"
+    >
+      <option value="">Choose a connection</option>
+      @for (c of connections; track c.id) {
+        <option [value]="c.id" [disabled]="!c.enabled">
+          {{ c.name }} · {{ c.provider }}{{ c.enabled ? '' : ' (disabled)' }}
+        </option>
+      }
+    </select></label
+  >
+  <p class="hint">
+    Manage credentials and permissions in Management → Connections. No credentials are stored in
+    this workflow.
+  </p>
+  <label
+    >Operation<select
+      aria-label="Database operation"
+      [(ngModel)]="op.operation"
+      (ngModelChange)="operationChanged()"
+    >
+      <option value="select">Read rows / documents</option>
+      <option value="insert" [disabled]="connection?.access === 'read'">Insert</option>
+      <option value="update" [disabled]="connection?.access === 'read'">
+        Update matching records
+      </option>
+      <option value="delete" [disabled]="connection?.access === 'read'">
+        Delete matching records
+      </option>
+      @if (connection?.provider === 'mongodb') {
+        <option value="aggregate">Aggregation pipeline (JSON)</option>
+      } @else {
+        <option value="sql">Execute SQL</option>
+      }
+    </select></label
+  >
+  @if (op.operation !== 'sql') {
+    <div class="schema-actions">
+      <button type="button" [disabled]="busy || !op.connection_id" (click)="discover()">
+        {{ busy ? 'Discovering…' : 'Discover schema' }}</button
+      ><span class="hint">{{ tables.length }} tables / collections</span>
+    </div>
+    @if (tables.length) {
+      <label
+        >Table / collection<select
+          aria-label="Discovered table"
+          [ngModel]="tableKey"
+          (ngModelChange)="tableChanged($event)"
+        >
+          <option value="">Choose a table</option>
+          @for (t of tables; track t.schema + '.' + t.name) {
+            <option [value]="t.schema + '.' + t.name">{{ t.schema ? t.schema + '.' : '' }}{{ t.name }}</option>
+          }
+        </select></label
+      >
+    }
+    <div class="two-columns">
+      <label
+        >Schema (SQL only)<input
+          aria-label="Database schema"
+          [(ngModel)]="op.schema"
+          (ngModelChange)="changed.emit()" /></label
+      ><label
+        >Table / collection name<input
+          aria-label="Database table"
+          [(ngModel)]="op.table"
+          (ngModelChange)="changed.emit()"
+      /></label>
+    </div>
+    @if (selectedTable?.inferred) {
+      <p class="hint">
+        MongoDB fields are inferred from a small sample. Empty collections may have no discovered
+        fields; add them using JSON below.
+      </p>
+    }
+    @if (op.operation === 'insert' || op.operation === 'update') {
+      <h4>Map fields</h4>
+      <p class="hint">
+        Enter a literal, JSON value, or a workflow reference such as
+        <code>&#36;{{ '{' }}input.email{{ '}' }}</code
+        >. Empty fields are omitted; use <code>null</code> for an explicit null.
+      </p>
+      @for (c of selectedTable?.columns || []; track c.name) {
+        <label
+          >{{ c.name }} <small>{{ c.type }}</small
+          ><input
+            [attr.aria-label]="'Map ' + c.name"
+            [ngModel]="fieldValue(c.name)"
+            (ngModelChange)="setField(c.name, $event)"
+        /></label>
+      }
+    }
+  } @else {
+    <label
+      >SQL statement<textarea
+        aria-label="Database SQL"
+        rows="7"
+        [(ngModel)]="op.query"
+        (ngModelChange)="changed.emit()"
+      ></textarea>
+    </label>
+    <p class="hint">
+      {{ connection?.provider === 'mysql' ? 'Use ? placeholders' : 'Use $1, $2 placeholders' }} and
+      bind values in the parameters array below. Do not interpolate workflow variables into SQL. One
+      statement, without a semicolon.
+    </p>
+  }
+  <label
+    >Parameters, filters and field values (JSON)<textarea
+      aria-label="Database JSON configuration"
+      rows="10"
+      [ngModel]="json"
+      (ngModelChange)="setJSON($event)"
+    ></textarea>
+  </label>
+  <label
+    >Maximum returned records<input
+      aria-label="Database row limit"
+      type="number"
+      min="1"
+      max="1000"
+      [(ngModel)]="op.limit"
+      (ngModelChange)="changed.emit()"
+  /></label>
+</fieldset>
+@if (error) {
+  <p class="error" role="alert">{{ error }}</p>
+}
+<aside>
+  Tests execute real queries. Writes change your database. One attempt, 20-second database deadline,
+  up to 1,000 records / 256 KiB. A timeout does not guarantee rollback; verify ambiguous writes
+  before retrying. Output: <code>rows</code>, <code>affected</code>, <code>truncated</code>.
+</aside>

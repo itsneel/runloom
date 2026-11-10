@@ -1,0 +1,179 @@
+<section class="prompt-editor" aria-label="Prompt editor">
+  <header>
+    <strong>Prompt</strong
+    ><button type="button" (click)="openLibrary()" [disabled]="busy">
+      {{ libraryOpen ? 'Close library' : 'Prompt library' }}
+    </button>
+  </header>
+  <p class="error" role="alert" *ngIf="error">{{ error }}</p>
+  <p role="status" *ngIf="status">{{ status }}</p>
+  <section class="library" *ngIf="libraryOpen">
+    <h4>Choose a library prompt</h4>
+    <button type="button" (click)="manageLibrary()">Manage prompt library</button>
+    <p>Versions are immutable. Publishing never updates existing workflows automatically.</p>
+    <label
+      >Library prompt<select
+        [ngModel]="selected"
+        (ngModelChange)="selectLibrary($event)"
+        [disabled]="busy"
+      >
+        <option value="">Choose a prompt</option>
+        <option *ngFor="let e of entries" [value]="e.id">
+          {{ e.name }} · {{ e.version ? 'v' + e.version : 'draft only' }}
+        </option>
+      </select></label
+    >
+    <p *ngIf="!entries.length">
+      No prompts yet. Open Manage prompt library to create and publish one.
+    </p>
+    <div class="actions" *ngIf="entry as e">
+      <button
+        type="button"
+        [disabled]="!editable || busy || !e.version"
+        (click)="useVersion(e.version)"
+      >
+        Use v{{ e.version }}</button
+      ><button type="button" [disabled]="!editable || busy" (click)="copyDraft(e)">
+        Copy draft to node
+      </button>
+    </div>
+    <details *ngIf="history.length">
+      <summary>History · {{ history.length }} revisions</summary>
+      <article *ngFor="let h of history">
+        <strong
+          >Revision {{ h.revision }} ·
+          {{ h.published ? 'published v' + h.version : 'draft' }}</strong
+        ><small>{{ h.actor }} · {{ h.updated_at | date: 'medium' }}</small>
+        <div class="actions">
+          <button
+            type="button"
+            *ngIf="h.published"
+            [disabled]="!editable || busy"
+            (click)="useVersion(h.version)"
+          >
+            Use v{{ h.version }}</button
+          ><button type="button" [disabled]="!editable || busy" (click)="copyDraft(h)">
+            Copy this revision
+          </button>
+        </div>
+      </article>
+    </details>
+  </section>
+  <ng-container *ngIf="!step.prompt_template; else typed">
+    <runloom-variable-editor
+      label="System instructions"
+      [value]="step.system_prompt || ''"
+      [hints]="hints"
+      [readonly]="!editable"
+      (valueChange)="legacy('system_prompt', $event)"
+    />
+    <runloom-variable-editor
+      label="Prompt and context"
+      [value]="step.prompt || ''"
+      [hints]="hints"
+      [readonly]="!editable"
+      [rows]="5"
+      (valueChange)="legacy('prompt', $event)"
+    />
+    <button type="button" [disabled]="!editable" (click)="convert()">Use typed template</button>
+    <p>
+      Converts workflow references into named, typed inputs. This enables previews and library
+      publishing.
+    </p>
+  </ng-container>
+  <ng-template #typed>
+    <p class="pin" *ngIf="step.prompt_ref as ref">
+      Library: {{ ref.id }} · pinned v{{ ref.version }}
+      <button type="button" [disabled]="!editable" (click)="detach()">Make local copy</button>
+    </p>
+    <runloom-variable-editor
+      label="System instructions"
+      [value]="step.prompt_template!.instructions"
+      [hints]="templateHints"
+      [readonly]="locked"
+      (valueChange)="text('instructions', $event)"
+    />
+    <runloom-variable-editor
+      label="Prompt template"
+      [value]="step.prompt_template!.text"
+      [hints]="templateHints"
+      [readonly]="locked"
+      [rows]="5"
+      (valueChange)="text('text', $event)"
+    />
+    <h4>Typed inputs</h4>
+    <p>
+      Use &#36;&#123;vars.name&#125; in templates. Bind workflow data separately below. Objects and
+      arrays render as JSON.
+    </p>
+    <article *ngFor="let v of step.prompt_template!.variables">
+      <div class="columns">
+        <label
+          >Name<input
+            [ngModel]="v.name"
+            (change)="rename(v, $any($event.target).value)"
+            [disabled]="locked" /></label
+        ><label
+          >Type<select [(ngModel)]="v.type" (ngModelChange)="change()" [disabled]="locked">
+            <option *ngFor="let type of types" [value]="type">{{ type }}</option>
+          </select></label
+        >
+      </div>
+      <label
+        >Description<input
+          [(ngModel)]="v.description"
+          (ngModelChange)="change()"
+          [disabled]="locked"
+      /></label>
+      <label class="check"
+        ><input
+          type="checkbox"
+          [(ngModel)]="v.required"
+          (ngModelChange)="change()"
+          [disabled]="locked"
+        />
+        Required</label
+      >
+      <label
+        >Default (plain text for strings; otherwise JSON)<input
+          [ngModel]="defaultText(v)"
+          (input)="setDefault(v, $any($event.target).value)"
+          [disabled]="locked"
+      /></label>
+      <runloom-variable-editor
+        [label]="'Map ' + v.name + ' (' + v.type + ')'"
+        [value]="mapping(v)"
+        [hints]="hints"
+        [readonly]="!editable"
+        [rows]="2"
+        (valueChange)="setMapping(v, $event)"
+      />
+      <button type="button" [disabled]="locked" (click)="removeVariable(v)">Remove input</button>
+    </article>
+    <div class="actions">
+      <button
+        type="button"
+        [disabled]="locked || step.prompt_template!.variables.length >= 50"
+        (click)="addVariable()"
+      >
+        Add input</button
+      ><button type="button" (click)="refreshHints()">Refresh variables</button>
+    </div>
+    <details>
+      <summary>Preview and test</summary>
+      <p>
+        Sample values are keyed by prompt input name. Preview makes no model call. Test uses the
+        saved workflow’s project budget and makes a real LLM call.
+      </p>
+      <label>Sample inputs (JSON)<textarea rows="5" [(ngModel)]="samples"></textarea></label>
+      <div class="actions">
+        <button type="button" [disabled]="!editable || busy" (click)="render(false)">
+          Preview rendered prompt</button
+        ><button type="button" [disabled]="!editable || busy" (click)="render(true)">
+          Run paid test
+        </button>
+      </div>
+      <pre *ngIf="preview">{{ preview }}</pre>
+    </details>
+  </ng-template>
+</section>

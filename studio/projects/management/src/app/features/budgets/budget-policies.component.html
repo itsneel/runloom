@@ -1,0 +1,197 @@
+<div class="budget-toolbar">
+  <p>Monthly UTC · USD · separate allowance for every project</p>
+  <div>
+    <button type="button" [disabled]="busy || !!draft" (click)="load()">Refresh budgets</button
+    ><button *ngIf="auth.teamAdmin()" type="button" [disabled]="busy" (click)="edit()">
+      New policy
+    </button>
+  </div>
+</div>
+<runloom-notice *ngIf="error" [message]="error" tone="error" (dismissed)="error = ''" />
+<runloom-notice *ngIf="notice" [message]="notice" tone="success" (dismissed)="notice = ''" />
+<p *ngIf="busy" role="status">Loading or saving budget policies…</p>
+<p *ngIf="!teamId">Choose a team to view its project budgets.</p>
+<form *ngIf="draft as p" (ngSubmit)="save()" aria-label="Budget policy editor">
+  <fieldset [disabled]="busy">
+    <legend>{{ p.revision ? 'Edit policy' : 'New soft and hard limit policy' }}</legend>
+    <label
+      >Policy name<input
+        name="policy-name"
+        aria-label="Policy name"
+        [(ngModel)]="p.name"
+        required
+        maxlength="100"
+    /></label>
+    <div class="limit-fields">
+      <label
+        >Soft limit (USD)<input
+          name="soft-limit"
+          aria-label="Soft limit USD"
+          [(ngModel)]="p.soft_usd"
+          inputmode="decimal"
+          placeholder="Optional — log and continue" /></label
+      ><label
+        >Hard limit (USD)<input
+          name="hard-limit"
+          aria-label="Hard limit USD"
+          [(ngModel)]="p.hard_usd"
+          inputmode="decimal"
+          placeholder="Optional — pause workflow"
+      /></label>
+    </div>
+    <p>
+      Set at least one limit. A limit of 0 applies immediately; leave blank to omit it. Soft limits
+      log warnings without stopping runs. Hard limits pause runs, preserving their progress.
+    </p>
+    <label><input type="checkbox" name="enabled" [(ngModel)]="p.enabled" /> Policy enabled</label>
+    <label
+      ><input type="checkbox" name="all-projects" [(ngModel)]="allProjects" /> Apply automatically
+      to all current and future projects</label
+    >
+    <fieldset *ngIf="!allProjects">
+      <legend>Apply to selected projects</legend>
+      <label *ngFor="let project of data?.projects"
+        ><input
+          type="checkbox"
+          [checked]="p.projects.includes(project.id)"
+          (change)="toggle('projects', project.id, $any($event.target).checked)"
+        />
+        {{ project.name }}</label
+      >
+    </fieldset>
+    <details>
+      <summary>Workflow exclusions ({{ p.excluded_workflows.length }})</summary>
+      <p>
+        All workflows inherit these rules by default. Excluded workflows bypass this policy, but
+        their costs still count toward the project's overall spend. Child workflows use their own
+        project and exclusions.
+      </p>
+      <label *ngFor="let workflow of data?.workflows"
+        ><input
+          type="checkbox"
+          [checked]="p.excluded_workflows.includes(workflow.id)"
+          (change)="toggle('excluded_workflows', workflow.id, $any($event.target).checked)"
+        />
+        Exclude {{ workflow.name }} <small>{{ workflow.id }}</small></label
+      >
+      <p *ngIf="!data?.workflows?.length">No saved workflows in this team.</p>
+    </details>
+    <label
+      >Reason for change<textarea
+        name="change-reason"
+        aria-label="Reason for change"
+        [(ngModel)]="p.reason"
+        required
+        maxlength="500"
+        rows="2"
+        placeholder="Required for the policy audit history"
+      ></textarea>
+    </label>
+    <button type="submit" [disabled]="busy">Save policy</button
+    ><button type="button" [disabled]="busy" (click)="cancel()">Cancel editing</button>
+  </fieldset>
+</form>
+<ng-container *ngIf="data as report">
+  <section class="budget-section">
+    <h2>Project budgets · {{ report.month }}</h2>
+    <p>
+      Resets {{ report.resets_at | date: 'medium' : 'UTC' }} UTC. Recorded estimated spend includes
+      tests and retries. Unknown or pending usage is not free. In-flight calls may exceed a limit.
+    </p>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th
+              [attr.aria-sort]="sort === 'name' ? (ascending ? 'ascending' : 'descending') : 'none'"
+            >
+              <button type="button" (click)="order('name')">Project</button>
+            </th>
+            <th
+              [attr.aria-sort]="
+                sort === 'spend' ? (ascending ? 'ascending' : 'descending') : 'none'
+              "
+            >
+              <button type="button" (click)="order('spend')">Recorded spend</button>
+            </th>
+            <th>Coverage</th>
+            <th>Policy status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of rows">
+            <td>{{ row.project_name }}</td>
+            <td>
+              {{ money(row.spend_usd) }}<small *ngIf="row.incomplete">Known subtotal only</small>
+            </td>
+            <td>
+              {{ row.requests }} requests ·
+              {{ !row.requests ? 'No recorded requests' : row.incomplete ? 'Incomplete accounting' : 'Recorded requests priced' }}
+            </td>
+            <td>{{ state(row.project_id) }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p *ngIf="!report.items.length">
+      No policies yet. An admin can create a policy to protect project budgets.
+    </p>
+  </section>
+  <section class="budget-section">
+    <h2>Reusable policies</h2>
+    <article *ngFor="let policy of report.items" class="policy-card">
+      <div class="budget-toolbar">
+        <h3>{{ policy.name }}</h3>
+        <span>{{ policy.enabled ? 'Enabled' : 'Disabled' }} · revision {{ policy.revision }}</span>
+      </div>
+      <p>{{ projectNames(policy) }}</p>
+      <div class="policy-limits">
+        <span>Soft: {{ policy.soft_usd !== '' ? money(policy.soft_usd) : 'Not set' }}</span
+        ><span>Hard: {{ policy.hard_usd !== '' ? money(policy.hard_usd) : 'Not set' }}</span
+        ><span>{{ policy.excluded_workflows?.length || 0 }} workflow exclusions</span>
+      </div>
+      <button
+        *ngIf="auth.teamAdmin()"
+        type="button"
+        [disabled]="busy"
+        (click)="edit(policy)"
+        [attr.aria-label]="'Edit policy ' + policy.name"
+      >
+        Edit policy
+      </button>
+    </article>
+  </section>
+  <section class="budget-section" *ngIf="report.alerts.length">
+    <h2>Limit alerts</h2>
+    <runloom-notice
+      *ngFor="let alert of report.alerts"
+      [message]="alert.message"
+      [tone]="alert.reason === 'hard_limit_reached' ? 'error' : 'warning'"
+      [dismissible]="false"
+    />
+  </section>
+  <details class="budget-section">
+    <summary>Policy change history (latest 100)</summary>
+    <article *ngFor="let change of report.changes">
+      <strong>{{ change.policy.name }} · revision {{ change.policy.revision }}</strong>
+      <p>
+        {{ change.policy.reason }} · {{ change.actor }} ·
+        {{ change.policy.updated_at | date: 'medium' : 'UTC' }} UTC
+      </p>
+    </article>
+    <p *ngIf="!report.changes.length">No policy changes recorded.</p>
+  </details>
+  <details class="budget-section">
+    <summary>Recent budget events</summary>
+    <p>
+      Budget events from the latest 100 team audit records. Each run also retains its own audit
+      history.
+    </p>
+    <article *ngFor="let event of report.events">
+      <strong>{{ event.event_type }}</strong>
+      <p>{{ event.payload.message }}</p>
+      <small>{{ event.workflow_id }} · {{ event.created_at | date: 'medium' : 'UTC' }} UTC</small>
+    </article>
+    <p *ngIf="!report.events.length">No budget events in the recent team audit records.</p>
+  </details>
+</ng-container>

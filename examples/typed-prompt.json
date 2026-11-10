@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.0",
+  "id": "typed-customer-summary",
+  "name": "Typed customer summary",
+  "description": "Use prompt input autocomplete, preview locally, then save the template to the team prompt library. Running this example makes a real LLM call.",
+  "kind": "main",
+  "version": 0,
+  "trigger": {"type": "manual"},
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "customer": {"type": "string", "description": "Customer display name"},
+      "request": {"type": "string", "description": "Customer's support request"}
+    },
+    "required": ["customer", "request"]
+  },
+  "steps": [{
+    "id": "summarize", "type": "llm", "model": "default",
+    "prompt_template": {
+      "instructions": "Summarize the customer's request. Flag human review if critical information is missing.",
+      "text": "Customer: ${vars.customer}\nRequest: ${vars.request}",
+      "variables": [
+        {"name": "customer", "type": "string", "required": true},
+        {"name": "request", "type": "string", "required": true}
+      ]
+    },
+    "prompt_inputs": {"customer": "${input.customer}", "request": "${input.request}"},
+    "output_schema": {"type": "object", "required": ["content", "hitl_required", "hitl_reason"]}
+  }],
+  "output": "${steps.summarize.output}"
+}

@@ -1,0 +1,20 @@
+<dialog #modal aria-modal="true" aria-labelledby="dialog-title" aria-describedby="dialog-message" (cancel)="cancel($event)" (keydown)="trapFocus($event)">
+  @if (dialogs.active(); as request) {
+    <form (ngSubmit)="submit()" novalidate>
+      <div class="dialog-heading">
+        <span class="dialog-icon" aria-hidden="true" [class.danger]="request.danger">{{ request.kind === 'prompt' ? '+' : '?' }}</span>
+        <h2 id="dialog-title">{{ request.title || 'Confirm action' }}</h2>
+      </div>
+      <p id="dialog-message">{{ request.message }}</p>
+      @if (request.kind === 'prompt') {
+        <label for="dialog-input">Project name</label>
+        <input id="dialog-input" name="dialog-input" [ngModel]="value()" (ngModelChange)="value.set($event); error.set('')" autocomplete="off" [attr.aria-invalid]="error() ? 'true' : null" [attr.aria-describedby]="error() ? 'dialog-error' : null" />
+        @if (error()) { <p id="dialog-error" class="error" role="alert">{{ error() }}</p> }
+      }
+      <div class="actions">
+        <button type="button" data-testid="dialog-cancel" (click)="cancel()">{{ request.cancelText || 'Cancel' }}</button>
+        <button type="submit" data-testid="dialog-confirm" class="primary" [class.danger]="request.danger">{{ request.confirmText || 'Confirm' }}</button>
+      </div>
+    </form>
+  }
+</dialog>

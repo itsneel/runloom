@@ -1,0 +1,12 @@
+# An existing controller owns networking; Runloom owns only its Ingress.
+# Change className and annotations to those required by your controller.
+auth:
+  publicURL: https://studio.runloom.dev
+ingress:
+  enabled: true
+  className: nginx
+  host: studio.runloom.dev
+  annotations: {}
+  tls:
+    - secretName: runloom-local-tls
+      hosts: [studio.runloom.dev]

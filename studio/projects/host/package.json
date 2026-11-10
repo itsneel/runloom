@@ -1,0 +1,42 @@
+{
+  "name": "@runloom/studio-host",
+  "version": "1.0.0",
+  "license": "MIT",
+  "scripts": {
+    "ng": "ng",
+    "start": "ng serve host",
+    "build": "npm run check:boundaries && ng build host",
+    "watch": "ng build host --watch --configuration development",
+    "test": "npm run check:boundaries && node --test tests/*.test.mjs",
+    "check:boundaries": "node tests/boundaries.mjs",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,mjs,cjs,html,scss,css,json}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,mjs,cjs,html,scss,css,json}\""
+  },
+  "private": true,
+  "packageManager": "npm@11.20.0",
+  "dependencies": {
+    "@angular/common": "22.1.5",
+    "@angular/compiler": "22.1.5",
+    "@angular/core": "22.1.5",
+    "@angular/forms": "22.1.5",
+    "@angular/platform-browser": "22.1.5",
+    "@angular/router": "22.1.5",
+    "@runloom/studio-platform": "file:vendor/runloom-studio-platform-1.8.0.tgz",
+    "rxjs": "~7.8.0",
+    "tslib": "^2.3.0"
+  },
+  "devDependencies": {
+    "@angular-architects/module-federation": "22.0.0",
+    "@angular-builders/custom-webpack": "22.0.1",
+    "@angular-devkit/build-angular": "22.1.7",
+    "@angular/cli": "22.1.7",
+    "@angular/compiler-cli": "22.1.5",
+    "license-webpack-plugin": "4.0.2",
+    "prettier": "3.9.9",
+    "typescript": "~6.0.2",
+    "webpack": "5.109.2"
+  },
+  "engines": {
+    "node": "26.13.0"
+  }
+}

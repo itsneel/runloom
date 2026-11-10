@@ -1,0 +1,107 @@
+/* Mist and Midnight: neutral slate surfaces with one muted indigo accent. */
+:root {
+  color-scheme: light;
+  --rl-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --rl-ink: #252936;
+  --rl-secondary: #545c70;
+  --rl-muted: #666d80;
+  --rl-select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23545c70' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 10 5 5 5-5'/%3E%3C/svg%3E");
+  --rl-border: #d5d9e3;
+  --rl-divider: #e5e8ef;
+  --rl-canvas: #f5f6fa;
+  --rl-soft: #f0f2f7;
+  --rl-surface: #fff;
+  --rl-accent: #505bc4;
+  --rl-accent-hover: #414ba8;
+  --rl-accent-soft: #eceefb;
+  --rl-accent-line: #c4c9ee;
+  --rl-on-accent: #ffffff;
+  --rl-success: #286848;
+  --rl-success-soft: #eaf3ed;
+  --rl-warning: #866020;
+  --rl-warning-soft: #faf3e5;
+  --rl-danger: #a53d40;
+  --rl-danger-soft: #fbefef;
+  --rl-nav: #eef0f6;
+  --rl-nav-hover: #e5e8f1;
+  --rl-nav-selected: #dde2f3;
+  --rl-nav-text: #303648;
+  --rl-nav-muted: #586176;
+  --rl-nav-border: #d5d9e5;
+  --rl-code-bg: #1c2030;
+  --rl-code-text: #e2e6f3;
+  --rl-scrim: #101320;
+  --rl-shadow-sm: 0 1px 2px #202d3305, 0 4px 12px #202d3305;
+  --rl-shadow-panel: 0 2px 6px #202d3305, 0 12px 36px #202d3309;
+  --rl-shadow-overlay: 0 8px 24px #202d3314, 0 32px 80px #202d3326;
+}
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --rl-ink: #e8ebf4;
+  --rl-secondary: #bbc2d4;
+  --rl-muted: #9ba6bc;
+  --rl-select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23bbc2d4' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 10 5 5 5-5'/%3E%3C/svg%3E");
+  --rl-border: #394153;
+  --rl-divider: #2c3343;
+  --rl-canvas: #141720;
+  --rl-soft: #232938;
+  --rl-surface: #1c212d;
+  --rl-accent: #a6afff;
+  --rl-accent-hover: #bcc3ff;
+  --rl-accent-soft: #292e49;
+  --rl-accent-line: #454e80;
+  --rl-on-accent: #15192e;
+  --rl-success: #8acbb0;
+  --rl-success-soft: #20392f;
+  --rl-warning: #e9c17d;
+  --rl-warning-soft: #3b3223;
+  --rl-danger: #f0a1ab;
+  --rl-danger-soft: #402831;
+  --rl-nav: #11151e;
+  --rl-nav-hover: #202635;
+  --rl-nav-selected: #2c344a;
+  --rl-nav-text: #e2e7f2;
+  --rl-nav-muted: #aab5cb;
+  --rl-nav-border: #2c3344;
+  --rl-code-bg: #11151e;
+  --rl-code-text: #d5ddf2;
+  --rl-shadow-sm: 0 1px 3px #00000020;
+  --rl-shadow-panel: 0 4px 16px #00000024;
+  --rl-shadow-overlay: 0 12px 32px #00000040, 0 32px 80px #00000050;
+}
+html, body { margin: 0; min-height: 100%; }
+body { font-family: var(--rl-font); background: var(--rl-canvas); color: var(--rl-ink); -webkit-font-smoothing: antialiased; }
+button, input, select, textarea { font-family: inherit; }
+input, select, textarea { color: var(--rl-ink); background-color: var(--rl-surface); }
+/* These icon-only invariants survive component background/padding shorthands.
+   Keep native select semantics, keyboard interaction and the platform popup. */
+select:not([multiple]):not([size]), select:not([multiple])[size='1'] {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: var(--rl-select-chevron) !important;
+  background-position: right 12px center !important;
+  background-size: 16px 16px !important;
+  background-repeat: no-repeat !important;
+  padding-inline-end: 40px !important;
+}
+select:not([multiple]):not([size]):dir(rtl), select:not([multiple])[size='1']:dir(rtl) {
+  background-position: left 12px center !important;
+}
+@media (forced-colors: active) {
+  select:not([multiple]):not([size]), select:not([multiple])[size='1'] {
+    appearance: auto;
+    -webkit-appearance: auto;
+    background-image: none !important;
+  }
+}
+button, a, input, select, textarea, summary { -webkit-tap-highlight-color: transparent; }
+button { transition: background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease; }
+input::placeholder, textarea::placeholder { color: var(--rl-muted); opacity: 1; }
+input[type='checkbox'], input[type='radio'] { accent-color: var(--rl-accent); }
+:where(button, a, input, select, textarea, summary):focus-visible { outline: 2px solid var(--rl-accent); outline-offset: 3px; }
+::selection { background: var(--rl-accent-line); color: var(--rl-ink); }
+/* Swap the whole palette together, without animating mismatched text/surfaces. */
+.theme-changing *, .theme-changing *::before, .theme-changing *::after { transition: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
+}

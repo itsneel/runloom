@@ -1,0 +1,9 @@
+/node_modules/
+/dist/
+/.angular/
+/test-results/
+/playwright-report/
+/src/app/core/content/generated/
+/public/generated/
+*.log
+.DS_Store

@@ -1,0 +1,211 @@
+# Independently runnable services. Generated local config is outside the repository.
+# Fresh isolated setup; see docs/service-split.md.
+x-service: &service
+  restart: unless-stopped
+  read_only: true
+  tmpfs: [/tmp]
+  security_opt: [no-new-privileges:true]
+  cap_drop: [ALL]
+  stop_grace_period: 45s
+  group_add: ["${RUNLOOM_SERVICE_GID:-65532}"]
+  environment:
+    RUNLOOM_CONFIG_FILE: /etc/runloom/config.yaml
+  healthcheck: &service-healthcheck
+    interval: 5s
+    timeout: 4s
+    start_period: 20s
+    retries: 30
+
+services:
+  postgres:
+    environment: !override
+      POSTGRES_DB: postgres
+      POSTGRES_USER: runloom_root
+      POSTGRES_PASSWORD_FILE: /run/secrets/database-root-password
+    secrets: [database-root-password]
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U runloom_root -d postgres"]
+  mongodb:
+    entrypoint: [bash, -ec]
+    command: !override
+      - 'cp /run/secrets/mongodb-replica-key /tmp/replica-key; chmod 400 /tmp/replica-key; chown mongodb:mongodb /tmp/replica-key; exec /usr/local/bin/docker-entrypoint.sh mongod --replSet runloom --bind_ip_all --keyFile /tmp/replica-key'
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: runloom_root
+      MONGO_INITDB_ROOT_PASSWORD_FILE: /run/secrets/database-root-password
+    secrets: [database-root-password, mongodb-replica-key]
+    healthcheck:
+      test: [CMD, mongosh, --quiet, --eval, "db.getSiblingDB('admin').auth('runloom_root', require('fs').readFileSync('/run/secrets/database-root-password','utf8').trim()); try { if (!db.hello().isWritablePrimary) { try { rs.status(); } catch { rs.initiate({_id:'runloom',members:[{_id:0,host:'mongodb:27017'}]}); } quit(1); } } catch { quit(1); }"]
+      start_period: 20s
+  database-setup:
+    <<: *service
+    image: ${DATABASE_SETUP_IMAGE:-runloom-database-setup:local}
+    build: {context: ./tools/database-setup}
+    profiles: [local-setup]
+    restart: "no"
+    entrypoint: [/runloom-database-setup]
+    healthcheck: {disable: true}
+    secrets:
+      - database-admin-url
+      - auth-database-url
+      - workflows-database-url
+      - management-database-url
+      - auth-database-password
+      - workflows-database-password
+      - management-database-password
+      - assistant-database-password
+      - assistant-database-url
+    configs:
+      - {source: database-setup, target: /etc/runloom/database-setup.json}
+  api:
+    healthcheck:
+      test: [CMD, /runloom-gateway, healthcheck, http://127.0.0.1:8080/readyz]
+      interval: 5s
+      timeout: 5s
+      start_period: 20s
+      retries: 30
+    image: ${GATEWAY_IMAGE:-runloom-gateway:local}
+    build: !override {context: ./server/gateway}
+    entrypoint: ["/runloom-gateway"]
+    configs: !override
+      - {source: services-gateway, target: /etc/runloom/config.yaml}
+    secrets: !override []
+    depends_on: !override
+      auth: {condition: service_healthy}
+      workflows: {condition: service_healthy}
+      management: {condition: service_healthy}
+      assistant: {condition: service_healthy}
+  worker:
+    healthcheck:
+      test: [CMD, /runloom-worker, healthcheck, http://127.0.0.1:8081/readyz/vault]
+    image: ${WORKER_IMAGE:-runloom-worker:local}
+    build: !override {context: ./server/workflows, dockerfile: Dockerfile.worker}
+    depends_on: !override
+      temporal: {condition: service_healthy}
+    configs: !override
+      - {source: services-worker, target: /etc/runloom/config.yaml}
+    secrets: !override
+      - {source: workflows-database-url, target: database-url}
+      - {source: worker-token, target: service-token}
+      - workflow-key
+      - llm-api-key
+    group_add: !override ["${RUNLOOM_SERVICE_GID:-65532}"]
+  local-admin:
+    entrypoint: [/runloom-local-admin]
+    image: ${LOCAL_ADMIN_IMAGE:-runloom-local-admin:local}
+    build: !override {context: ./server/auth, dockerfile: Dockerfile.local-admin}
+    configs: !override
+      - {source: services-auth, target: /etc/runloom/config.yaml}
+    secrets: !override
+      - {source: auth-database-url, target: database-url}
+      - runloom-provisioner
+    group_add: !override ["${RUNLOOM_SERVICE_GID:-65532}"]
+  auth:
+    <<: *service
+    healthcheck:
+      <<: *service-healthcheck
+      test: [CMD, /runloom-auth, healthcheck, http://127.0.0.1:8080/readyz]
+    image: ${AUTH_IMAGE:-runloom-auth:local}
+    build: {context: ./server/auth}
+    entrypoint: ["/runloom-auth"]
+    configs:
+      - {source: services-auth, target: /etc/runloom/config.yaml}
+      - {source: services-trust, target: /etc/runloom/trust.json}
+    secrets:
+      - {source: auth-database-url, target: database-url}
+      - {source: auth-token, target: service-token}
+      - runloom-provisioner
+  workflows:
+    <<: *service
+    healthcheck:
+      test: [CMD, /runloom-workflows, healthcheck, http://127.0.0.1:8080/readyz/vault]
+      interval: 5s
+      timeout: 4s
+      start_period: 20s
+      retries: 30
+    image: ${WORKFLOWS_IMAGE:-runloom-workflows:local}
+    build: {context: ./server/workflows}
+    entrypoint: ["/runloom-workflows"]
+    configs:
+      - {source: services-workflows, target: /etc/runloom/config.yaml}
+      - {source: services-trust, target: /etc/runloom/trust.json}
+    secrets:
+      - {source: workflows-database-url, target: database-url}
+      - {source: workflows-token, target: service-token}
+      - workflow-key
+  assistant:
+    <<: *service
+    healthcheck:
+      <<: *service-healthcheck
+      test: [CMD, /runloom-assistant, healthcheck, http://127.0.0.1:8080/readyz]
+    image: ${ASSISTANT_IMAGE:-runloom-assistant:local}
+    build: {context: ./server/assistant}
+    configs:
+      - {source: services-assistant, target: /etc/runloom/config.yaml}
+    secrets:
+      - {source: assistant-database-url, target: database-url}
+      - assistant-api-key
+  management:
+    <<: *service
+    healthcheck:
+      <<: *service-healthcheck
+      test: [CMD, /runloom-management, healthcheck, http://127.0.0.1:8080/readyz]
+    ports: ["127.0.0.1:${MANAGEMENT_PORT:-38083}:8080"]
+    image: ${MANAGEMENT_IMAGE:-runloom-management:local}
+    build: {context: ./server/management}
+    entrypoint: ["/runloom-management"]
+    configs:
+      - {source: services-management, target: /etc/runloom/config.yaml}
+      - {source: services-trust, target: /etc/runloom/trust.json}
+    secrets:
+      - {source: management-database-url, target: database-url}
+      - {source: management-token, target: service-token}
+configs:
+  services-assistant:
+    file: ${RUNLOOM_SERVICES_CONFIG_DIR:?Run make local-services-up}/assistant.yaml
+  database-setup:
+    file: ${RUNLOOM_SERVICES_CONFIG_DIR:?Run make local-services-up}/database-setup.json
+  services-auth:
+    file: ${RUNLOOM_SERVICES_CONFIG_DIR:?Run make local-services-up}/auth.yaml
+  services-workflows:
+    file: ${RUNLOOM_SERVICES_CONFIG_DIR:?Run make local-services-up}/workflows.yaml
+  services-management:
+    file: ${RUNLOOM_SERVICES_CONFIG_DIR:?Run make local-services-up}/management.yaml
+  services-worker:
+    file: ${RUNLOOM_SERVICES_CONFIG_DIR:?Run make local-services-up}/worker.yaml
+  services-gateway:
+    file: ${RUNLOOM_SERVICES_CONFIG_DIR:?Run make local-services-up}/gateway.yaml
+  services-trust:
+    file: ${RUNLOOM_SERVICES_CONFIG_DIR:?Run make local-services-up}/trust.json
+secrets:
+  assistant-api-key:
+    file: ${RUNLOOM_ASSISTANT_API_KEY_PATH:-./deploy/empty-llm-key}
+  assistant-database-url:
+    file: ${RUNLOOM_SERVICES_CONFIG_DIR:?Run make local-services-up}/assistant-database-url
+  assistant-database-password:
+    file: ${RUNLOOM_SERVICES_CONFIG_DIR:?Run make local-services-up}/assistant-database-password
+  database-admin-url:
+    file: ${RUNLOOM_SERVICES_CONFIG_DIR:?Run make local-services-up}/database-admin-url
+  auth-database-password:
+    file: ${RUNLOOM_SERVICES_CONFIG_DIR:?Run make local-services-up}/auth-database-password
+  workflows-database-password:
+    file: ${RUNLOOM_SERVICES_CONFIG_DIR:?Run make local-services-up}/workflows-database-password
+  management-database-password:
+    file: ${RUNLOOM_SERVICES_CONFIG_DIR:?Run make local-services-up}/management-database-password
+  database-root-password:
+    file: ${RUNLOOM_SERVICES_CONFIG_DIR:?Run make local-services-up}/database-root-password
+  mongodb-replica-key:
+    file: ${RUNLOOM_SERVICES_CONFIG_DIR:?Run make local-services-up}/mongodb-replica-key
+  auth-database-url:
+    file: ${RUNLOOM_SERVICES_CONFIG_DIR:?Run make local-services-up}/auth-database-url
+  workflows-database-url:
+    file: ${RUNLOOM_SERVICES_CONFIG_DIR:?Run make local-services-up}/workflows-database-url
+  management-database-url:
+    file: ${RUNLOOM_SERVICES_CONFIG_DIR:?Run make local-services-up}/management-database-url
+  auth-token:
+    file: ${RUNLOOM_SERVICES_CONFIG_DIR:?Run make local-services-up}/auth-token
+  workflows-token:
+    file: ${RUNLOOM_SERVICES_CONFIG_DIR:?Run make local-services-up}/workflows-token
+  management-token:
+    file: ${RUNLOOM_SERVICES_CONFIG_DIR:?Run make local-services-up}/management-token
+  worker-token:
+    file: ${RUNLOOM_SERVICES_CONFIG_DIR:?Run make local-services-up}/worker-token

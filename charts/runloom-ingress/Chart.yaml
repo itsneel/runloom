@@ -1,0 +1,13 @@
+apiVersion: v2
+name: runloom-ingress
+description: Optional, separately managed F5 NGINX Open Source ingress controller
+type: application
+version: 0.1.0
+appVersion: "5.7.0"
+kubeVersion: ">=1.26.0-0"
+dependencies:
+  - name: nginx-ingress
+    alias: nginx
+    version: "2.8.0"
+    repository: oci://ghcr.io/nginx/charts
+    condition: nginx.enabled

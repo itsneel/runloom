@@ -1,0 +1,9 @@
+{
+  "RUNLOOM_SMTP_HOST": "smtp.example.test",
+  "RUNLOOM_SMTP_PORT": "587",
+  "RUNLOOM_SMTP_FROM": "sender@example.test",
+  "RUNLOOM_SMTP_TLS": "starttls",
+  "RUNLOOM_SMTP_USERNAME": "sender",
+  "RUNLOOM_SMTP_PASSWORD_FILE": "/run/secrets/smtp-password",
+  "RUNLOOM_SMTP_ALLOWED_DOMAINS": ""
+}

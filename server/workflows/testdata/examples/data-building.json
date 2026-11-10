@@ -1,0 +1,54 @@
+{
+  "schema_version": "1.0",
+  "id": "data-building",
+  "name": "Prepare active customers",
+  "kind": "main",
+  "version": 1,
+  "trigger": {"type": "manual"},
+  "input_schema": {
+    "type": "object",
+    "properties": {"customers": {"type": "array", "items": {"type": "object"}}},
+    "required": ["customers"]
+  },
+  "steps": [
+    {
+      "id": "active",
+      "type": "collection",
+      "data": {
+        "operation": "filter",
+        "source": "${input.customers}",
+        "predicate": {"left": "${item.active}", "operator": "equals", "right": true}
+      }
+    },
+    {
+      "id": "prepare",
+      "type": "foreach",
+      "foreach": {
+        "items": "${steps.active.output}",
+        "concurrency": 2,
+        "output": "${steps.map-customer.output}"
+      },
+      "branches": [{
+        "id": "body",
+        "steps": [{
+          "id": "map-customer",
+          "type": "transform",
+          "data": {
+            "operation": "map",
+            "source": "${loop.item}",
+            "fields": [
+              {"name": "name", "value": "${item.name}", "type": "string"},
+              {"name": "email", "value": "${item.email}", "use_default": true, "default": ""}
+            ]
+          }
+        }]
+      }]
+    },
+    {
+      "id": "count",
+      "type": "collection",
+      "data": {"operation": "count", "source": "${steps.prepare.output}"}
+    }
+  ],
+  "output": {"customers": "${steps.prepare.output}", "count": "${steps.count.output.count}"}
+}

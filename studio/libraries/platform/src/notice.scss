@@ -1,0 +1,19 @@
+:host { --accent: var(--rl-accent); --tint: var(--rl-soft); display: block; min-width: 0; margin: 12px 0; font: 13px/1.5 var(--rl-font); }
+:host([data-tone='success']) { --accent: var(--rl-success); --tint: var(--rl-success-soft); }
+:host([data-tone='error']) { --accent: var(--rl-danger); --tint: var(--rl-danger-soft); }
+:host([data-tone='warning']) { --accent: var(--rl-warning); --tint: var(--rl-warning-soft); }
+.notice-card { box-sizing: border-box; display: flex; align-items: flex-start; gap: 12px; padding: 16px; border: 1px solid var(--rl-divider); border-radius: 12px; background: var(--rl-surface); color: var(--rl-ink); box-shadow: 0 2px 4px color-mix(in srgb, var(--rl-scrim) 2%, transparent); }
+.notice-icon { display: grid; place-items: center; flex: 0 0 32px; height: 32px; border-radius: 10px; color: var(--accent); background: var(--tint); }
+svg { display: block; width: 20px; height: 20px; }
+.notice-copy { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+strong { display: block; font-size: 13px; font-weight: 650; line-height: 1.5; color: var(--rl-ink); }
+p { margin: 3px 0 0; color: var(--rl-secondary); font-size: 12px; line-height: 1.65; white-space: pre-wrap; max-height: min(240px, 35dvh); overflow-y: auto; }
+.notice-close { display: grid; place-items: center; flex: 0 0 32px; height: 32px; padding: 0; margin: -4px -4px 0 0; color: var(--rl-muted); border: 0; border-radius: 7px; background: transparent; cursor: pointer; }
+.notice-close:hover { color: var(--rl-ink); background: var(--rl-soft); }
+.notice-close:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.notice-close svg { width: 16px; height: 16px; }
+:host.toast { position: fixed; z-index: 65; right: max(24px, env(safe-area-inset-right)); bottom: max(24px, env(safe-area-inset-bottom)); width: min(420px, calc(100vw - 32px)); margin: 0; animation: notice-enter 180ms ease-out; }
+:host.toast .notice-card { border-color: var(--rl-divider); box-shadow: 0 8px 32px color-mix(in srgb, var(--rl-scrim) 9%, transparent), 0 2px 8px color-mix(in srgb, var(--rl-scrim) 3%, transparent); }
+@keyframes notice-enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@media (max-width: 600px) { :host.toast { right: 16px; bottom: max(16px, env(safe-area-inset-bottom)); } .notice-card { padding: 14px; gap: 10px; } .notice-close { flex-basis: 40px; height: 40px; } }
+@media (prefers-reduced-motion: reduce) { :host.toast { animation: none; } }

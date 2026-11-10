@@ -1,0 +1,18 @@
+# Automatically included by local-up/fresh-up; explicit opt-in for hosted stacks.
+# Never put the credential value in Compose environment variables.
+services:
+  api:
+    # Local setup supplies a deduplicated union with the vault group afterward.
+    # Direct Compose with different credential groups needs an explicit union.
+    group_add: !override
+      - "${RUNLOOM_PROVISIONER_SECRET_GID:-65532}"
+    configs:
+      - {source: runloom-consumer, target: /etc/runloom/config.d/20-consumer.yaml}
+    secrets:
+      - runloom-provisioner
+configs:
+  runloom-consumer:
+    file: ${RUNLOOM_CONSUMER_CONFIG_PATH:-./compose/config/consumer.yaml}
+secrets:
+  runloom-provisioner:
+    file: ${RUNLOOM_PROVISIONER_SECRET_PATH:?Set the path to the provisioner secret file}

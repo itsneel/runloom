@@ -1,0 +1,5 @@
+{
+  "workflows": "/remotes/workflows/remoteEntry.js",
+  "management": "/remotes/management/remoteEntry.js",
+  "platform": "/remotes/platform/remoteEntry.js"
+}

@@ -1,0 +1,13 @@
+**
+!LICENSE
+!server/
+!server/**
+!sdk/
+!sdk/go-auth/
+!sdk/go-auth/**
+server/bin
+server/var
+server/coverage.out
+server/api-docs/node_modules
+**/.env
+**/.env.*

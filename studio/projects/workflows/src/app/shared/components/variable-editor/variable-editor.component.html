@@ -1,0 +1,39 @@
+<label
+  ><span>{{ label }}</span
+  ><textarea
+    #area
+    [value]="value"
+    [rows]="rows"
+    [readOnly]="readonly"
+    [attr.aria-label]="label"
+    autocomplete="off"
+    spellcheck="false"
+    (input)="input(area)"
+    (click)="update(area)"
+    (keydown)="key($event, area)"
+    (blur)="open = false"
+    [attr.aria-expanded]="open"
+  ></textarea>
+</label>
+<div class="suggestions" *ngIf="open" role="listbox" [attr.aria-label]="label + ' variables'">
+  <button
+    type="button"
+    *ngFor="let hint of matches; let i = index"
+    role="option"
+    [attr.aria-selected]="selected === i"
+    [class.active]="selected === i"
+    (mousedown)="$event.preventDefault()"
+    (click)="choose(hint, area)"
+    [title]="hint.description"
+  >
+    <code>{{ hint.path }}</code
+    ><small>{{ hint.type }}{{ hint.optional ? ' · optional' : '' }}</small>
+  </button>
+  <p *ngIf="!matches.length">
+    No available variables match. Declare input/output schemas for typed suggestions.
+  </p>
+</div>
+<small class="help"
+  >Type &#36;&#123; or press Ctrl+Space for variables. Unknown and optional values need runtime
+  checks.</small
+>

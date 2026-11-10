@@ -1,0 +1,117 @@
+{{- if .Values.development.enabled }}
+{{- range $component := list "temporal" "identity-db" }}
+{{- $postgres := eq $component "identity-db" }}
+{{- $dbName := "keycloak" }}
+{{- $port := 7233 }}
+{{- $image := $.Values.development.temporalImage }}
+{{- $mount := "/home/temporal" }}
+{{- if $postgres }}
+{{- $port = 5432 }}
+{{- $image = $.Values.development.postgresImage }}
+{{- $mount = "/var/lib/postgresql/data" }}
+{{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "runloom.fullname" $ }}-{{ $component }}
+  labels:
+    {{- include "runloom.labels" $ | nindent 4 }}
+spec:
+  clusterIP: None
+  selector:
+    app.kubernetes.io/instance: {{ $.Release.Name }}
+    app.kubernetes.io/component: {{ $component }}
+  ports:
+    - name: service
+      port: {{ $port }}
+      targetPort: service
+    {{- if eq $component "temporal" }}
+    - name: ui
+      port: 8233
+      targetPort: ui
+    {{- end }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "runloom.fullname" $ }}-{{ $component }}
+  labels:
+    {{- include "runloom.labels" $ | nindent 4 }}
+spec:
+  serviceName: {{ include "runloom.fullname" $ }}-{{ $component }}
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ $.Release.Name }}
+      app.kubernetes.io/component: {{ $component }}
+  template:
+    metadata:
+      labels:
+        {{- include "runloom.labels" $ | nindent 8 }}
+        app.kubernetes.io/component: {{ $component }}
+    spec:
+      automountServiceAccountToken: false
+      {{- if eq $component "temporal" }}
+      securityContext:
+        fsGroup: 1000
+      {{- end }}
+      {{- with $.Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ $component }}
+          image: {{ $image | quote }}
+          {{- if eq $component "temporal" }}
+          args: ["server", "start-dev", "--ip", "0.0.0.0", "--db-filename", "/home/temporal/temporal.db", "--namespace", {{ $.Values.temporal.namespace | quote }}]
+          {{- else if $postgres }}
+          env:
+            - {name: POSTGRES_DB, value: {{ $dbName | quote }}}
+            - {name: POSTGRES_USER, value: runloom}
+            - {name: POSTGRES_PASSWORD, value: runloom}
+            - {name: PGDATA, value: /var/lib/postgresql/data/pgdata}
+          {{- end }}
+          ports:
+            - name: service
+              containerPort: {{ $port }}
+            {{- if eq $component "temporal" }}
+            - name: ui
+              containerPort: 8233
+            {{- end }}
+          readinessProbe:
+            {{- if eq $component "temporal" }}
+            exec:
+              command: ["temporal", "operator", "cluster", "health", "--address", "localhost:7233"]
+            {{- else if $postgres }}
+            exec:
+              command: ["pg_isready", "-U", "runloom", "-d", {{ $dbName | quote }}]
+            {{- end }}
+            periodSeconds: 5
+            timeoutSeconds: 5
+          resources:
+            {{- toYaml $.Values.development.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: {{ $mount }}
+      {{- with $.Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $.Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: [ReadWriteOnce]
+        {{- with $.Values.development.persistence.storageClass }}
+        storageClassName: {{ . | quote }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ $.Values.development.persistence.size }}
+{{- end }}
+{{- end }}

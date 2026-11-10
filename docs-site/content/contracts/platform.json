@@ -1,0 +1,882 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Runloom Platform API",
+    "version": "1.0.0",
+    "description": "Separate platform administration. No team header is required. Existing users only; role changes are audited atomically and checked on every request. Hosted access requires operator-configured MFA. Password-only access is local opt-in."
+  },
+  "servers": [
+    {
+      "url": "/api/v1/platform"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "platformBearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  },
+  "paths": {
+    "/me": {
+      "get": {
+        "operationId": "getPlatformIdentity",
+        "summary": "Read own role and permissions",
+        "description": "Required permission: any verified human; no MFA step-up for discovery. Platform roles do not grant tenant-content access.",
+        "security": [
+          {
+            "platformBearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "type": "string",
+                      "enum": [
+                        "",
+                        "platform_admin",
+                        "platform_staff"
+                      ]
+                    },
+                    "permissions": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or last administrator protection"
+          },
+          "401": {
+            "description": "Verified human Studio token required; machine tokens rejected"
+          },
+          "403": {
+            "description": "Insufficient platform permission or recent MFA required"
+          },
+          "503": {
+            "description": "Identity database unavailable"
+          }
+        }
+      }
+    },
+    "/organizations": {
+      "get": {
+        "operationId": "listPlatformOrganizations",
+        "summary": "List organization metadata",
+        "description": "Required permission: platform.organizations.read. Platform roles do not grant tenant-content access.",
+        "security": [
+          {
+            "platformBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "team_count": {
+                            "type": "integer"
+                          },
+                          "member_count": {
+                            "type": "integer"
+                          },
+                          "parent_id": {
+                            "type": "string"
+                          },
+                          "child_count": {
+                            "type": "integer"
+                          },
+                          "child_limit": {
+                            "type": "object",
+                            "properties": {
+                              "max_children": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 10
+                              },
+                              "default_max_children": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 10
+                              },
+                              "override": {
+                                "type": [
+                                  "integer",
+                                  "null"
+                                ],
+                                "minimum": 0,
+                                "maximum": 10
+                              },
+                              "maximum": {
+                                "type": "integer",
+                                "const": 10
+                              }
+                            },
+                            "additionalProperties": false
+                          }
+                        },
+                        "additionalProperties": false
+                      }
+                    },
+                    "total": {
+                      "type": "integer"
+                    },
+                    "offset": {
+                      "type": "integer"
+                    },
+                    "limit": {
+                      "type": "integer"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or last administrator protection"
+          },
+          "401": {
+            "description": "Verified human Studio token required; machine tokens rejected"
+          },
+          "403": {
+            "description": "Insufficient platform permission or recent MFA required"
+          },
+          "503": {
+            "description": "Identity database unavailable"
+          }
+        }
+      }
+    },
+    "/organization-settings": {
+      "get": {
+        "operationId": "getOrganizationSettings",
+        "summary": "Read child organization creation policy",
+        "description": "Required permission: platform.organizations.configure. Platform roles do not grant tenant-content access.",
+        "security": [
+          {
+            "platformBearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "max_children": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 10
+                    },
+                    "maximum": {
+                      "type": "integer"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or last administrator protection"
+          },
+          "401": {
+            "description": "Verified human Studio token required; machine tokens rejected"
+          },
+          "403": {
+            "description": "Insufficient platform permission or recent MFA required"
+          },
+          "503": {
+            "description": "Identity database unavailable"
+          }
+        }
+      },
+      "put": {
+        "operationId": "setOrganizationSettings",
+        "summary": "Set child organization limit; preserve existing organizations",
+        "description": "Required permission: platform.organizations.configure. Platform roles do not grant tenant-content access.",
+        "security": [
+          {
+            "platformBearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "max_children": {
+                      "type": "integer"
+                    },
+                    "maximum": {
+                      "type": "integer"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or last administrator protection"
+          },
+          "401": {
+            "description": "Verified human Studio token required; machine tokens rejected"
+          },
+          "403": {
+            "description": "Insufficient platform permission or recent MFA required"
+          },
+          "503": {
+            "description": "Identity database unavailable"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "max_children": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 10
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "max_children"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/organizations/{org}/child-limit": {
+      "get": {
+        "operationId": "getOrganizationChildLimit",
+        "summary": "Read effective organization child limit",
+        "description": "Root organizations only. Limits count children excluding the parent. Overrides replace the platform default, allow 0–10, and preserve existing children. Changes are audited. Keycloak administrators can override Runloom creation rules.",
+        "security": [
+          {
+            "platformBearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "max_children": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 10
+                    },
+                    "default_max_children": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 10
+                    },
+                    "override": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ],
+                      "minimum": 0,
+                      "maximum": 10
+                    },
+                    "maximum": {
+                      "type": "integer",
+                      "const": 10
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or last administrator protection"
+          },
+          "401": {
+            "description": "Verified human Studio token required; machine tokens rejected"
+          },
+          "403": {
+            "description": "Insufficient platform permission or recent MFA required"
+          },
+          "503": {
+            "description": "Identity database unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "org",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      },
+      "put": {
+        "operationId": "setOrganizationChildLimit",
+        "summary": "Override child limit for one organization",
+        "description": "Root organizations only. Limits count children excluding the parent. Overrides replace the platform default, allow 0–10, and preserve existing children. Changes are audited. Keycloak administrators can override Runloom creation rules.",
+        "security": [
+          {
+            "platformBearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "max_children": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 10
+                    },
+                    "default_max_children": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 10
+                    },
+                    "override": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ],
+                      "minimum": 0,
+                      "maximum": 10
+                    },
+                    "maximum": {
+                      "type": "integer",
+                      "const": 10
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or last administrator protection"
+          },
+          "401": {
+            "description": "Verified human Studio token required; machine tokens rejected"
+          },
+          "403": {
+            "description": "Insufficient platform permission or recent MFA required"
+          },
+          "503": {
+            "description": "Identity database unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "org",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "max_children": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 10
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "max_children"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "resetOrganizationChildLimit",
+        "summary": "Restore platform default for one organization",
+        "description": "Root organizations only. Limits count children excluding the parent. Overrides replace the platform default, allow 0–10, and preserve existing children. Changes are audited. Keycloak administrators can override Runloom creation rules.",
+        "security": [
+          {
+            "platformBearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "max_children": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 10
+                    },
+                    "default_max_children": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 10
+                    },
+                    "override": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ],
+                      "minimum": 0,
+                      "maximum": 10
+                    },
+                    "maximum": {
+                      "type": "integer",
+                      "const": 10
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or last administrator protection"
+          },
+          "401": {
+            "description": "Verified human Studio token required; machine tokens rejected"
+          },
+          "403": {
+            "description": "Insufficient platform permission or recent MFA required"
+          },
+          "503": {
+            "description": "Identity database unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "org",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/staff": {
+      "get": {
+        "operationId": "listPlatformStaff",
+        "summary": "List platform assignments",
+        "description": "Required permission: platform.staff.manage. Platform roles do not grant tenant-content access.",
+        "security": [
+          {
+            "platformBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "email": {
+                            "type": "string",
+                            "format": "email"
+                          },
+                          "role": {
+                            "type": "string",
+                            "enum": [
+                              "",
+                              "platform_admin",
+                              "platform_staff"
+                            ]
+                          }
+                        },
+                        "additionalProperties": false
+                      }
+                    },
+                    "total": {
+                      "type": "integer"
+                    },
+                    "offset": {
+                      "type": "integer"
+                    },
+                    "limit": {
+                      "type": "integer"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or last administrator protection"
+          },
+          "401": {
+            "description": "Verified human Studio token required; machine tokens rejected"
+          },
+          "403": {
+            "description": "Insufficient platform permission or recent MFA required"
+          },
+          "503": {
+            "description": "Identity database unavailable"
+          }
+        }
+      },
+      "put": {
+        "operationId": "setPlatformRole",
+        "summary": "Assign or remove platform access",
+        "description": "Required permission: platform.staff.manage. Platform roles do not grant tenant-content access.",
+        "security": [
+          {
+            "platformBearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "saved": {
+                      "type": "boolean"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or last administrator protection"
+          },
+          "401": {
+            "description": "Verified human Studio token required; machine tokens rejected"
+          },
+          "403": {
+            "description": "Insufficient platform permission or recent MFA required"
+          },
+          "503": {
+            "description": "Identity database unavailable"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "",
+                      "platform_admin",
+                      "platform_staff"
+                    ]
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 300
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "email",
+                  "role",
+                  "reason"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/audit": {
+      "get": {
+        "operationId": "listPlatformAudit",
+        "summary": "List newest platform access changes first",
+        "description": "Required permission: platform.audit.read. Platform roles do not grant tenant-content access.",
+        "security": [
+          {
+            "platformBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "actor": {
+                            "type": "string"
+                          },
+                          "target": {
+                            "type": "string"
+                          },
+                          "action": {
+                            "type": "string"
+                          },
+                          "previous_role": {
+                            "type": "string"
+                          },
+                          "role": {
+                            "type": "string"
+                          },
+                          "reason": {
+                            "type": "string"
+                          },
+                          "created_at": {
+                            "type": "string"
+                          }
+                        },
+                        "additionalProperties": false
+                      }
+                    },
+                    "total": {
+                      "type": "integer"
+                    },
+                    "offset": {
+                      "type": "integer"
+                    },
+                    "limit": {
+                      "type": "integer"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or last administrator protection"
+          },
+          "401": {
+            "description": "Verified human Studio token required; machine tokens rejected"
+          },
+          "403": {
+            "description": "Insufficient platform permission or recent MFA required"
+          },
+          "503": {
+            "description": "Identity database unavailable"
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "operationId": "getPlatformHealth",
+        "summary": "Check configured service readiness",
+        "description": "Required permission: platform.health.read. Platform roles do not grant tenant-content access.",
+        "security": [
+          {
+            "platformBearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "checked_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "service": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "healthy",
+                              "degraded",
+                              "unavailable",
+                              "unknown"
+                            ]
+                          },
+                          "detail": {
+                            "type": "string"
+                          },
+                          "latency_ms": {
+                            "type": "integer"
+                          }
+                        },
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or last administrator protection"
+          },
+          "401": {
+            "description": "Verified human Studio token required; machine tokens rejected"
+          },
+          "403": {
+            "description": "Insufficient platform permission or recent MFA required"
+          },
+          "503": {
+            "description": "Identity database unavailable"
+          }
+        }
+      }
+    }
+  }
+}

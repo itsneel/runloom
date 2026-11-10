@@ -1,0 +1,237 @@
+<section class="connections">
+  <header class="toolbar">
+    <div>
+      <h2>Database connections</h2>
+      <p>Connect once. Reuse securely in your team's workflows.</p>
+    </div>
+    <button type="button" [disabled]="busy || !configured || !auth.teamAdmin()" (click)="edit()">
+      <runloom-icon name="plus" /> Add connection
+    </button>
+  </header>
+  @if (message && !formOpen) {
+    <runloom-notice
+      [tone]="failed ? 'error' : 'success'"
+      [message]="message"
+      (dismissed)="message = ''"
+    />
+  }
+  @if (!configured) {
+    <p role="status">
+      An operator must configure the workflow encryption key before connections can be saved.
+    </p>
+  }
+  <label class="search"
+    ><runloom-icon name="search" /><input
+      aria-label="Search connections"
+      placeholder="Search connections"
+      [(ngModel)]="search"
+  /></label>
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>Connection</th>
+          <th>Database</th>
+          <th>Access</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (c of filtered; track c.id) {
+          <tr>
+            <td>
+              <strong>{{ c.name }}</strong
+              ><small>{{ c.id }}</small>
+            </td>
+            <td>
+              <span>{{ c.provider }}</span
+              ><small>{{ c.host }} · {{ c.database }}</small>
+            </td>
+            <td>
+              {{
+                c.access === 'schema'
+                  ? 'SQL & schema changes'
+                  : c.access === 'write'
+                    ? 'Read & write'
+                    : 'Read only'
+              }}
+            </td>
+            <td>
+              <span class="status">{{ c.enabled ? 'Enabled' : 'Disabled' }}</span>
+            </td>
+            <td>
+              <div class="row-actions">
+                <button
+                  type="button"
+                  [disabled]="busy || !c.enabled || !auth.canEdit()"
+                  (click)="test(c)"
+                >
+                  Test</button
+                ><button
+                  type="button"
+                  [disabled]="busy || !c.enabled || !auth.canEdit()"
+                  (click)="test(c, true)"
+                >
+                  Schema
+                </button>
+                @if (auth.teamAdmin()) {
+                  <button type="button" [disabled]="busy" (click)="edit(c)">Edit</button
+                  ><button type="button" class="danger" [disabled]="busy" (click)="remove(c)">
+                    Delete
+                  </button>
+                }
+              </div>
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="5" class="empty">
+              No matching connections. Add PostgreSQL, MySQL, MongoDB or Supabase to get started.
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  @if (formOpen) {
+    <form class="connection-form" (ngSubmit)="save()">
+      <header>
+        <h3>{{ editing ? 'Edit connection' : 'New connection' }}</h3>
+        <button type="button" [disabled]="busy" (click)="close()">Close</button>
+      </header>
+      <fieldset [disabled]="busy">
+        <div class="form-grid">
+          <label>Name<input name="name" [(ngModel)]="draft.name" required maxlength="120" /></label>
+          <label
+            >Connection ID<input
+              name="id"
+              [(ngModel)]="draft.id"
+              [readOnly]="editing"
+              required
+              pattern="[a-z][a-z0-9-]{0,63}"
+            /><small>Lowercase letters, digits and hyphens. Referenced by workflows.</small></label
+          >
+          <label
+            >Database type<select
+              name="provider"
+              [(ngModel)]="draft.provider"
+              (ngModelChange)="providerChanged()"
+            >
+              <option value="postgres">PostgreSQL</option>
+              <option value="mysql">MySQL</option>
+              <option value="mongodb">MongoDB</option>
+              <option value="supabase">Supabase (PostgreSQL)</option>
+            </select></label
+          >
+          <label
+            >Permissions<select name="access" [(ngModel)]="draft.access">
+              <option value="read">Read only</option>
+              <option value="write">Read and mapped writes</option>
+              <option value="schema">Advanced SQL and schema changes</option>
+            </select></label
+          >
+          <label
+            >Host<input name="host" [(ngModel)]="draft.host" required placeholder="db.example.com"
+          /></label>
+          <label
+            >Port<input
+              name="port"
+              type="number"
+              min="1"
+              max="65535"
+              [(ngModel)]="draft.port"
+              required
+          /></label>
+          <label>Database<input name="database" [(ngModel)]="draft.database" required /></label>
+          <label
+            >Username<input
+              name="username"
+              [(ngModel)]="draft.username"
+              autocomplete="off"
+              required
+          /></label>
+          <label
+            >Password<input
+              name="password"
+              type="password"
+              [(ngModel)]="draft.password"
+              autocomplete="new-password"
+              [required]="!editing"
+            /><small>{{
+              editing
+                ? 'Leave blank to keep the saved password.'
+                : 'Encrypted on save; never returned to the browser.'
+            }}</small></label
+          >
+          @if (draft.provider === 'mongodb') {
+            <label
+              >Authentication database<input
+                name="auth-source"
+                [(ngModel)]="draft.auth_source"
+                placeholder="admin" /><small>Use the database where the user was created. Blank uses admin, not the Database field above.</small></label
+            ><label class="check"
+              ><input name="srv" type="checkbox" [(ngModel)]="draft.srv" /> Use SRV discovery
+              (Atlas)</label
+            >
+          }
+          <label class="check"
+            ><input name="tls" type="checkbox" [(ngModel)]="draft.tls" /> Verify TLS
+            certificate</label
+          ><label class="check"
+            ><input name="enabled" type="checkbox" [(ngModel)]="draft.enabled" /> Enabled</label
+          >
+        </div>
+      </fieldset>
+      <p class="warning">
+        Use a dedicated, least-privilege database user. All trusted editors in this team can use
+        this connection. Database permissions remain authoritative. Private addresses require
+        operator configuration.
+      </p>
+      @if (draft.provider === 'supabase') {
+        <p>
+          Use the PostgreSQL connection details from Supabase's Connect panel, not an API key.
+          Direct or session-pooler connections are supported.
+        </p>
+      }
+      @if (message) {
+        <runloom-notice [tone]="failed ? 'error' : 'success'" [message]="message" (dismissed)="message = ''" />
+      }
+      <p>Saving an enabled connection automatically tests database access. A failed test leaves the settings saved so you can correct them.</p>
+      <button type="submit" [disabled]="busy">{{ testing ? 'Testing connection…' : busy ? 'Saving…' : 'Save connection' }}</button>
+    </form>
+  }
+  @if (tables.length) {
+    <section class="schema">
+      <h3>Schema · {{ schemaFor }}</h3>
+      @for (t of tables; track t.schema + '.' + t.name) {
+        <details>
+          <summary>
+            {{ t.schema ? t.schema + '.' : '' }}{{ t.name }}
+            @if (t.inferred) {
+              <small>Sampled fields; not a guaranteed schema</small>
+            }
+          </summary>
+          <table>
+            <thead>
+              <tr>
+                <th>Field</th>
+                <th>Type</th>
+                <th>Nullable</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (c of t.columns; track c.name) {
+                <tr>
+                  <td>{{ c.name }}</td>
+                  <td>{{ c.type }}</td>
+                  <td>{{ c.nullable ? 'Yes' : 'No' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </details>
+      }
+    </section>
+  }
+</section>

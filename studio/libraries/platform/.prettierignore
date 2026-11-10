@@ -1,0 +1,10 @@
+node_modules/
+vendor/
+dist/
+build/
+.angular/
+coverage/
+releases/
+package-lock.json
+npm-shrinkwrap.json
+*.generated.*

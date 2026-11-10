@@ -1,0 +1,38 @@
+{
+  "schema_version": "1.0",
+  "id": "ai-decision-modes",
+  "name": "AI Decision: three modes",
+  "description": "Demonstrates routing, selecting several actions, and bounded repeated decisions. Action paths only return synthetic data; LLM calls still incur provider costs.",
+  "kind": "main",
+  "input_schema": {"type": "object", "required": ["text"], "properties": {"text": {"type": "string"}}},
+  "steps": [
+    {
+      "id": "choose-one", "type": "decision", "model": "default",
+      "prompt": "Select the best response for this request: ${input.text}",
+      "decision": {"mode": "single", "execution": "sequential", "max_rounds": 1, "max_actions": 1},
+      "branches": [
+        {"id": "respond", "description": "Handle an ordinary request.", "steps": [{"id": "single-response", "type": "activity", "activity": "runloom.echo", "with": {"route": "respond"}}]},
+        {"id": "escalate", "description": "Prepare a complex request for support.", "steps": [{"id": "single-escalation", "type": "activity", "activity": "runloom.echo", "with": {"route": "escalate"}}]}
+      ]
+    },
+    {
+      "id": "choose-several", "type": "decision", "model": "default",
+      "prompt": "Choose all relevant actions for this request: ${input.text}",
+      "decision": {"mode": "multiple", "execution": "parallel", "max_rounds": 1, "max_actions": 2},
+      "branches": [
+        {"id": "notify", "description": "Prepare a notification.", "steps": [{"id": "multiple-notify", "type": "activity", "activity": "runloom.echo", "with": {"notification": "prepared"}}]},
+        {"id": "ticket", "description": "Prepare a support ticket.", "steps": [{"id": "multiple-ticket", "type": "activity", "activity": "runloom.echo", "with": {"ticket": "prepared"}}]}
+      ]
+    },
+    {
+      "id": "decide-repeatedly", "type": "decision", "model": "default",
+      "prompt": "For ${input.text}, first look up details, then prepare a response using the previous results, then finish. Do not repeat an action already completed.",
+      "decision": {"mode": "agent", "execution": "sequential", "max_rounds": 3, "max_actions": 2},
+      "branches": [
+        {"id": "lookup", "description": "Look up details before preparing a reply.", "steps": [{"id": "agent-lookup", "type": "activity", "activity": "runloom.echo", "with": {"status": "found", "round": "${decision.round}"}}]},
+        {"id": "reply", "description": "Prepare a response once details have been found.", "steps": [{"id": "agent-reply", "type": "activity", "activity": "runloom.echo", "with": {"status": "prepared", "previous": "${decision.previous}"}}]}
+      ]
+    }
+  ],
+  "output": {"single": "${steps.choose-one.output}", "multiple": "${steps.choose-several.output}", "agent": "${steps.decide-repeatedly.output}"}
+}

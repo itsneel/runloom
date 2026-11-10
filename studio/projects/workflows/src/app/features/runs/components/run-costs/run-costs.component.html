@@ -1,0 +1,31 @@
+<h3>Cost &amp; Usage</h3>
+    <p *ngIf="error" class="error" role="alert">{{error}}</p>
+    <ng-container *ngIf="data as page">
+      <div class="summary">
+        <span>Estimated LLM cost · USD</span>
+        <strong class="total">{{page.summary.requests ? (page.summary.requests > page.summary.unknown + page.summary.unpriced + page.summary.pending ? money(page.summary.estimated_usd) : 'Unknown') : 'Not recorded'}}</strong>
+        <p>Known subtotal: direct {{money(page.summary.direct_usd)}} · Child workflows {{money(page.summary.child_usd)}}</p>
+        <small>{{page.summary.requests}} requests · {{page.summary.input_tokens | number}} input tokens · {{page.summary.output_tokens | number}} output tokens</small>
+      </div>
+      <p *ngIf="!page.summary.requests">No usage records for this run. Older runs are not backfilled; this does not prove zero spend.</p>
+      <p class="warning" *ngIf="page.summary.requests && !page.summary.complete">Partial estimate: {{page.summary.unknown}} unknown, {{page.summary.unpriced}} unpriced, {{page.summary.pending}} pending. Missing costs are not counted as free.</p>
+      <p class="warning" *ngIf="page.summary.truncated">Summary is limited to 10,000 requests and is a lower bound.</p>
+      <p>Provider-reported usage with saved pricing, not an invoice. Totals include descendants and all attempts. Cached input and reasoning tokens are subsets, not additional tokens.</p>
+      <h4>By node</h4>
+      <p *ngFor="let node of page.summary.nodes"><strong>{{node.step_id}}</strong> · {{node.requests > node.incomplete ? money(node.estimated_usd) : 'Unknown'}} · {{node.requests}} requests<small>{{node.workflow_id === workflowId ? 'This run' : 'Child run'}}{{node.incomplete ? ' · Partial accounting' : ''}}</small></p>
+      <div class="filters">
+        <input aria-label="Cost model filter" placeholder="Exact model" [(ngModel)]="model" />
+        <input aria-label="Cost node filter" placeholder="Node ID" [(ngModel)]="step" />
+        <button type="button" [disabled]="busy" (click)="reload()">Apply filters</button>
+        <button type="button" [disabled]="busy" (click)="reload()">Refresh costs</button>
+      </div>
+      <small>Filters affect request rows; the summary always covers the whole run. Rows are grouped by stable request ID, not time.</small>
+      <details *ngFor="let entry of page.entries; trackBy: track">
+        <summary><strong>{{entry.step_id}}</strong> · {{entry.model}} · Attempt {{entry.attempt}}<br />{{entry.accounting === 'estimated' ? money(entry.cost_usd!) : entry.accounting}} · {{entry.status}}<small>{{entry.definition_id}} v{{entry.definition_version}} · {{entry.started_at | date:'medium'}}{{entry.is_test ? ' · Test' : ''}}</small></summary>
+        <dl><dt>Provider</dt><dd>{{entry.provider}}</dd><dt>Requested model</dt><dd>{{entry.requested_model}}</dd><dt>Input tokens</dt><dd>{{entry.input_tokens}}</dd><dt>Cached input</dt><dd>{{entry.cached_tokens}}</dd><dt>Output tokens</dt><dd>{{entry.output_tokens}}</dd><dt>Reasoning subset</dt><dd>{{entry.reasoning_tokens}}</dd><dt>Duration</dt><dd>{{entry.duration_ms}} ms</dd><dt>Pricing version</dt><dd>{{entry.pricing?.version || 'Not priced'}}</dd><dt>Exact USD estimate</dt><dd>{{entry.cost_usd || 'Unknown'}}</dd></dl>
+        <small>Run <code>{{entry.workflow_id}}</code></small><small *ngIf="entry.provider_request_id">Provider request <code>{{entry.provider_request_id}}</code></small>
+      </details>
+      <p *ngIf="!page.entries.length">No requests match these filters.</p>
+      <button *ngIf="page.next_cursor" type="button" [disabled]="busy" (click)="more()">Load more requests</button>
+    </ng-container>
+    <p *ngIf="!data && !error">Loading cost accounting…</p>

@@ -1,0 +1,6 @@
+# Your platform owns the Ingress, Gateway/HTTPRoute or external load balancer.
+# Route to <release-fullname>-ui:80. Internal backend services stay private.
+auth:
+  publicURL: https://studio.runloom.dev
+ingress:
+  enabled: false

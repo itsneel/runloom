@@ -1,0 +1,1597 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://runloom.local/schemas/workflow-1.0.json",
+  "title": "Runloom Workflow Definition",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "id",
+    "name",
+    "steps"
+  ],
+  "if": {
+    "required": [
+      "kind"
+    ],
+    "properties": {
+      "kind": {
+        "const": "child"
+      }
+    }
+  },
+  "then": {
+    "properties": {
+      "trigger": {
+        "$ref": "#/$defs/manual-trigger"
+      }
+    }
+  },
+  "properties": {
+    "layout": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "positions"
+      ],
+      "description": "Optional Studio canvas coordinates; do not affect execution order.",
+      "properties": {
+        "positions": {
+          "type": "object",
+          "maxProperties": 1002,
+          "propertyNames": {
+            "pattern": "^(@trigger|@finish|(@join:)?[a-z][a-z0-9-]{0,63})$"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "x",
+              "y"
+            ],
+            "properties": {
+              "x": {
+                "type": "number",
+                "minimum": -100000,
+                "maximum": 100000
+              },
+              "y": {
+                "type": "number",
+                "minimum": -100000,
+                "maximum": 100000
+              }
+            }
+          }
+        }
+      }
+    },
+    "kind": {
+      "enum": [
+        "main",
+        "child"
+      ],
+      "default": "main",
+      "description": "Child production execution requires a parent Subworkflow node. Published children may be independently tested through the authenticated Studio test action."
+    },
+    "schema_version": {
+      "const": "1.0"
+    },
+    "id": {
+      "$ref": "#/$defs/identifier"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 2000,
+      "default": ""
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 0,
+      "default": 0
+    },
+    "trigger": {
+      "$ref": "#/$defs/trigger"
+    },
+    "input_schema": {
+      "type": "object",
+      "default": {}
+    },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 500,
+      "items": {
+        "$ref": "#/$defs/step"
+      }
+    },
+    "output": {
+      "default": null
+    }
+  },
+  "$defs": {
+    "integration": {
+      "type": "object", "additionalProperties": false, "required": ["id", "type", "integration"],
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"}, "name": {"type": "string", "maxLength": 120},
+        "type": {"const": "integration"}, "output_schema": {"type": "object"},
+        "integration": {
+          "type": "object", "additionalProperties": false, "required": ["operation", "secret", "parameters"],
+          "properties": {
+            "operation": {"enum": ["sheets-read", "sheets-append", "drive-list", "gmail-list", "calendar-list", "slack-send", "teams-send", "outlook-send", "notion-search", "hubspot-contacts"]},
+            "secret": {"$ref": "#/$defs/identifier"},
+            "parameters": {"type": "object", "description": "Operation-specific typed fields from the Studio catalog. The backend rejects unknown fields."}
+          }
+        }
+      }
+    },
+    "data-operation": {
+      "type": "object", "additionalProperties": false,
+      "required": ["operation"],
+      "properties": {
+        "operation": {"enum": ["map", "filter", "sort", "limit", "unique", "count", "sum", "split", "compare", "append", "join"]},
+        "source": {}, "other": {},
+        "keep_source": {"type": "boolean"},
+        "key": {"type": "string", "maxLength": 256},
+        "other_key": {"type": "string", "maxLength": 256},
+        "descending": {"type": "boolean"},
+        "limit": {"type": "integer", "minimum": 0, "maximum": 1000},
+        "predicate": {
+          "type": "object", "additionalProperties": false, "required": ["left", "operator"],
+          "properties": {
+            "left": {}, "right": {},
+            "operator": {"enum": ["equals", "not_equals", "contains", "exists", "greater_than", "greater_than_or_equal", "less_than", "less_than_or_equal"]}
+          }
+        },
+        "fields": {
+          "type": "array", "maxItems": 100,
+          "items": {
+            "type": "object", "additionalProperties": false, "required": ["name", "value"],
+            "properties": {
+              "name": {"$ref": "#/$defs/identifier"}, "value": {}, "default": {},
+              "use_default": {"type": "boolean"},
+              "type": {"enum": ["", "string", "number", "integer", "boolean", "object", "array"]}
+            }
+          }
+        }
+      }
+    },
+    "data-node": {
+      "type": "object", "additionalProperties": false, "required": ["id", "type", "data"],
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"},
+        "name": {"type": "string", "maxLength": 120},
+        "type": {"enum": ["transform", "collection", "merge"]},
+        "output_schema": {"type": "object"},
+        "data": {"$ref": "#/$defs/data-operation"}
+      },
+      "allOf": [
+        {"if": {"properties": {"type": {"const": "transform"}}}, "then": {"properties": {"data": {"properties": {"operation": {"const": "map"}}}}}},
+        {"if": {"properties": {"type": {"const": "collection"}}}, "then": {"properties": {"data": {"properties": {"operation": {"enum": ["filter", "sort", "limit", "unique", "count", "sum", "split", "compare"]}}}}}},
+        {"if": {"properties": {"type": {"const": "merge"}}}, "then": {"properties": {"data": {"properties": {"operation": {"enum": ["append", "join"]}}}}}}
+      ]
+    },
+    "foreach": {
+      "type": "object", "additionalProperties": false, "required": ["id", "type", "foreach", "branches"],
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"},
+        "name": {"type": "string", "maxLength": 120},
+        "type": {"const": "foreach"},
+        "output_schema": {"type": "object"},
+        "foreach": {
+          "type": "object", "additionalProperties": false, "required": ["items", "output", "concurrency"],
+          "properties": {"items": {}, "output": {}, "concurrency": {"type": "integer", "minimum": 1, "maximum": 10}}
+        },
+        "branches": {
+          "type": "array", "minItems": 1, "maxItems": 1,
+          "items": {
+            "type": "object", "additionalProperties": false, "required": ["id", "steps"],
+            "properties": {"id": {"const": "body"}, "steps": {"type": "array", "minItems": 1, "maxItems": 500, "items": {"$ref": "#/$defs/step"}}}
+          }
+        }
+      }
+    },
+    "fail": {
+      "type": "object", "additionalProperties": false, "required": ["id", "type", "message"],
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"}, "name": {"type": "string", "maxLength": 120},
+        "type": {"const": "fail"}, "message": {"type": "string", "minLength": 1, "maxLength": 2000},
+        "output_schema": {"type": "object"}
+      }
+    },
+    "promptVariable": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "type",
+        "required"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+        },
+        "type": {
+          "enum": [
+            "string",
+            "number",
+            "integer",
+            "boolean",
+            "object",
+            "array"
+          ]
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "default": {}
+      }
+    },
+    "promptTemplate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "text",
+        "instructions",
+        "variables"
+      ],
+      "properties": {
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 16000
+        },
+        "instructions": {
+          "type": "string",
+          "maxLength": 16000
+        },
+        "variables": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {
+            "$ref": "#/$defs/promptVariable"
+          }
+        }
+      }
+    },
+    "promptReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "version"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "hash": {
+          "type": "string"
+        }
+      }
+    },
+    "identifier": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{0,63}$"
+    },
+    "activity-name": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9.-]{0,127}$"
+    },
+    "manual-trigger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "const": "manual"
+        }
+      }
+    },
+    "webhook-trigger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "path",
+        "method"
+      ],
+      "properties": {
+        "type": {
+          "const": "webhook"
+        },
+        "path": {
+          "$ref": "#/$defs/identifier"
+        },
+        "method": {
+          "enum": [
+            "POST"
+          ]
+        }
+      }
+    },
+    "trigger": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/manual-trigger"
+        },
+        {
+          "$ref": "#/$defs/webhook-trigger"
+        }
+      ],
+      "default": {
+        "type": "manual"
+      }
+    },
+    "retry": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "maximum_attempts": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 3
+        },
+        "initial_interval_seconds": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 86400,
+          "default": 1
+        },
+        "backoff_coefficient": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 2
+        },
+        "maximum_interval_seconds": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 86400,
+          "default": 60
+        }
+      }
+    },
+    "email": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type",
+        "email"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "type": {
+          "const": "email"
+        },
+        "email": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "to",
+            "subject",
+            "text"
+          ],
+          "properties": {
+            "to": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 50,
+              "items": {
+                "$ref": "#/$defs/email-address"
+              }
+            },
+            "cc": {
+              "type": "array",
+              "maxItems": 50,
+              "items": {
+                "$ref": "#/$defs/email-address"
+              }
+            },
+            "bcc": {
+              "type": "array",
+              "maxItems": 50,
+              "items": {
+                "$ref": "#/$defs/email-address"
+              }
+            },
+            "reply_to": {
+              "type": "string",
+              "maxLength": 254,
+              "pattern": "^[^\\r\\n\u0000]*$"
+            },
+            "subject": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 300,
+              "pattern": "^[^\\r\\n\u0000]+$"
+            },
+            "text": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 262144
+            },
+            "html": {
+              "type": "string",
+              "maxLength": 262144
+            }
+          }
+        },
+        "output_schema": {
+          "type": "object",
+          "description": "Validates the entire node output at runtime before downstream nodes execute."
+        }
+      },
+      "description": "SMTP email: one attempt, fixed 30-second Activity timeout. Worker-owned sender and credentials. All fields support references; server enforces combined 256 KiB UTF-8 body and 50 total recipients."
+    },
+    "email-address": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 254,
+      "pattern": "^[^\\r\\n\u0000]+$",
+      "description": "One plain ASCII mailbox or a workflow expression resolving to one."
+    },
+    "code": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type",
+        "code"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "type": {
+          "const": "code"
+        },
+        "code": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "runtime",
+            "source"
+          ],
+          "properties": {
+            "runtime": {
+              "const": "quickjs-ng-0.11.0-v1"
+            },
+            "source": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 32768,
+              "description": "Synchronous JavaScript function body receiving input and returning JSON. Literal source, never interpolated. Server enforces a 32 KiB UTF-8 limit."
+            }
+          }
+        },
+        "with": {
+          "type": "object",
+          "default": {}
+        },
+        "output_schema": {
+          "type": "object",
+          "description": "Validates the entire node output at runtime before downstream nodes execute."
+        }
+      }
+    },
+    "activity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type",
+        "activity"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "type": {
+          "const": "activity"
+        },
+        "activity": {
+          "$ref": "#/$defs/activity-name",
+          "not": {
+            "pattern": "^runloom\\.internal\\."
+          }
+        },
+        "with": {
+          "type": "object",
+          "default": {}
+        },
+        "timeout_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 86400,
+          "default": 60
+        },
+        "retry": {
+          "$ref": "#/$defs/retry"
+        },
+        "output_schema": {
+          "type": "object",
+          "description": "Validates the entire node output at runtime before downstream nodes execute."
+        }
+      }
+    },
+    "subworkflow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type",
+        "definition_id",
+        "version"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "type": {
+          "const": "subworkflow"
+        },
+        "definition_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "with": {
+          "type": "object",
+          "default": {}
+        },
+        "timeout_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 31536000,
+          "default": 3600
+        },
+        "output_schema": {
+          "type": "object",
+          "description": "Validates the entire node output at runtime before downstream nodes execute."
+        }
+      }
+    },
+    "llm": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type",
+        "model"
+      ],
+      "properties": {
+        "llm_task": {
+          "type": "object", "additionalProperties": false, "required": ["kind"],
+          "properties": {
+            "kind": {"enum": ["extract", "classify", "summarize", "sentiment"]},
+            "labels": {"type": "array", "minItems": 2, "maxItems": 50, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 100}},
+            "fields": {
+              "type": "array", "minItems": 1, "maxItems": 50,
+              "items": {
+                "type": "object", "additionalProperties": false, "required": ["name", "type"],
+                "properties": {
+                  "name": {"type": "string", "pattern": "^[a-z][a-z0-9_]{0,63}$"},
+                  "type": {"enum": ["string", "number", "integer", "boolean"]},
+                  "description": {"type": "string", "maxLength": 1000}
+                }
+              }
+            }
+          },
+          "allOf": [
+            {"if": {"properties": {"kind": {"const": "extract"}}}, "then": {"required": ["fields"]}, "else": {"not": {"required": ["fields"]}}},
+            {"if": {"properties": {"kind": {"const": "classify"}}}, "then": {"required": ["labels"]}, "else": {"not": {"required": ["labels"]}}}
+          ]
+        },
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "type": {
+          "const": "llm"
+        },
+        "model": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "system_prompt": {
+          "type": "string",
+          "maxLength": 20000,
+          "default": ""
+        },
+        "prompt": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100000
+        },
+        "temperature": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 2,
+          "default": 0.2
+        },
+        "max_tokens": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 128000,
+          "default": 2000
+        },
+        "timeout_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1800,
+          "default": 120
+        },
+        "retry": {
+          "$ref": "#/$defs/retry"
+        },
+        "output_schema": {
+          "type": "object",
+          "description": "Validates the entire node output at runtime before downstream nodes execute."
+        },
+        "prompt_template": {
+          "$ref": "#/$defs/promptTemplate"
+        },
+        "prompt_ref": {
+          "$ref": "#/$defs/promptReference"
+        },
+        "prompt_inputs": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "anyOf": [
+        {
+          "required": [
+            "prompt"
+          ]
+        },
+        {
+          "required": [
+            "prompt_template"
+          ]
+        },
+        {
+          "required": [
+            "prompt_ref"
+          ]
+        }
+      ]
+    },
+    "wait": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type",
+        "seconds"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "type": {
+          "const": "wait"
+        },
+        "seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 31536000
+        },
+        "output_schema": {
+          "type": "object",
+          "description": "Validates the entire node output at runtime before downstream nodes execute."
+        }
+      }
+    },
+    "approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type",
+        "prompt"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "type": {
+          "const": "approval"
+        },
+        "prompt": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "timeout_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 31536000
+        },
+        "on_timeout": {
+          "enum": [
+            "reject",
+            "fail"
+          ],
+          "default": "reject"
+        },
+        "output_schema": {
+          "type": "object",
+          "description": "Validates the entire node output at runtime before downstream nodes execute."
+        }
+      }
+    },
+    "callback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type",
+        "callback_key",
+        "prompt"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "type": {
+          "const": "callback"
+        },
+        "callback_key": {
+          "$ref": "#/$defs/activity-name"
+        },
+        "prompt": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "timeout_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 31536000
+        },
+        "on_timeout": {
+          "enum": [
+            "fail",
+            "continue"
+          ],
+          "default": "fail"
+        },
+        "output_schema": {
+          "type": "object",
+          "description": "Validates the entire node output at runtime before downstream nodes execute."
+        }
+      }
+    },
+    "pause": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type",
+        "message"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "type": {
+          "const": "pause"
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "timeout_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 31536000
+        },
+        "on_timeout": {
+          "enum": [
+            "fail",
+            "resume"
+          ],
+          "default": "fail"
+        },
+        "output_schema": {
+          "type": "object",
+          "description": "Validates the entire node output at runtime before downstream nodes execute."
+        }
+      }
+    },
+    "signal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type",
+        "signal_name",
+        "prompt"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "type": {
+          "const": "signal"
+        },
+        "signal_name": {
+          "$ref": "#/$defs/activity-name"
+        },
+        "prompt": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "timeout_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 31536000
+        },
+        "on_timeout": {
+          "enum": [
+            "fail",
+            "continue"
+          ],
+          "default": "fail"
+        },
+        "output_schema": {
+          "type": "object",
+          "description": "Validates the entire node output at runtime before downstream nodes execute."
+        }
+      }
+    },
+    "condition-expression": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "left",
+        "operator"
+      ],
+      "properties": {
+        "left": {},
+        "operator": {
+          "enum": [
+            "equals",
+            "not_equals",
+            "contains",
+            "exists",
+            "greater_than",
+            "greater_than_or_equal",
+            "less_than",
+            "less_than_or_equal"
+          ]
+        },
+        "right": {}
+      }
+    },
+    "condition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type",
+        "if",
+        "then"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "type": {
+          "const": "condition"
+        },
+        "if": {
+          "$ref": "#/$defs/condition-expression"
+        },
+        "then": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/step"
+          }
+        },
+        "else": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/step"
+          },
+          "default": []
+        },
+        "output_schema": {
+          "type": "object",
+          "description": "Validates the entire node output at runtime before downstream nodes execute."
+        }
+      }
+    },
+    "branch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "steps"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "steps": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/step"
+          }
+        }
+      }
+    },
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type",
+        "model",
+        "decision",
+        "branches"
+      ],
+      "description": "Select predefined action paths using schema-validated LLM output. Action paths cannot contain End or nested AI Decision nodes. Agent mode is bounded and isolates every action invocation.",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "type": {
+          "const": "decision"
+        },
+        "model": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "system_prompt": {
+          "type": "string",
+          "maxLength": 20000
+        },
+        "prompt": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100000
+        },
+        "temperature": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 2,
+          "default": 0.2
+        },
+        "max_tokens": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 128000,
+          "default": 2000
+        },
+        "timeout_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1800,
+          "default": 120
+        },
+        "retry": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/retry"
+            },
+            {
+              "properties": {
+                "maximum_attempts": {
+                  "maximum": 3
+                }
+              }
+            }
+          ]
+        },
+        "decision": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "mode"
+          ],
+          "properties": {
+            "mode": {
+              "enum": [
+                "single",
+                "multiple",
+                "agent"
+              ]
+            },
+            "execution": {
+              "enum": [
+                "sequential",
+                "parallel"
+              ],
+              "default": "sequential"
+            },
+            "max_rounds": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 20
+            },
+            "max_actions": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "mode": {
+                    "enum": [
+                      "single",
+                      "multiple"
+                    ]
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "max_rounds": {
+                    "const": 1
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "mode": {
+                    "enum": [
+                      "single",
+                      "agent"
+                    ]
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "execution": {
+                    "const": "sequential"
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "mode": {
+                    "const": "single"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "max_actions": {
+                    "const": 1
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "branches": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 20,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "description",
+              "steps"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/identifier"
+              },
+              "description": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000
+              },
+              "steps": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "$ref": "#/$defs/step"
+                }
+              }
+            }
+          }
+        },
+        "output_schema": {
+          "type": "object",
+          "description": "Validates the entire node output at runtime before downstream nodes execute."
+        },
+        "prompt_template": {
+          "$ref": "#/$defs/promptTemplate"
+        },
+        "prompt_ref": {
+          "$ref": "#/$defs/promptReference"
+        },
+        "prompt_inputs": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "anyOf": [
+        {
+          "required": [
+            "prompt"
+          ]
+        },
+        {
+          "required": [
+            "prompt_template"
+          ]
+        },
+        {
+          "required": [
+            "prompt_ref"
+          ]
+        }
+      ]
+    },
+    "parallel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type",
+        "branches"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "type": {
+          "const": "parallel"
+        },
+        "branches": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 50,
+          "items": {
+            "$ref": "#/$defs/branch"
+          }
+        },
+        "output_schema": {
+          "type": "object",
+          "description": "Validates the entire node output at runtime before downstream nodes execute."
+        }
+      }
+    },
+    "http": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type",
+        "http"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "type": {
+          "const": "http"
+        },
+        "http": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "url",
+            "method"
+          ],
+          "properties": {
+            "url": {
+              "type": "string",
+              "pattern": "^https://",
+              "maxLength": 8192
+            },
+            "method": {
+              "enum": [
+                "GET",
+                "POST",
+                "PUT",
+                "PATCH",
+                "DELETE",
+                "HEAD",
+                "OPTIONS"
+              ]
+            },
+            "headers": {
+              "type": "object",
+              "maxProperties": 32,
+              "additionalProperties": {
+                "type": "string",
+                "maxLength": 8192
+              }
+            },
+            "secret_headers": {
+              "type": "object",
+              "maxProperties": 32,
+              "additionalProperties": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "secret"
+                ],
+                "properties": {
+                  "secret": {
+                    "$ref": "#/$defs/identifier"
+                  },
+                  "prefix": {
+                    "enum": [
+                      "",
+                      "Bearer ",
+                      "Basic "
+                    ]
+                  }
+                }
+              }
+            },
+            "body": {}
+          }
+        },
+        "timeout_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 300,
+          "default": 30
+        },
+        "retry": {
+          "$ref": "#/$defs/retry",
+          "default": {
+            "maximum_attempts": 1
+          }
+        },
+        "output_schema": {
+          "type": "object",
+          "description": "Validates the entire node output at runtime before downstream nodes execute."
+        }
+      }
+    },
+    "end": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type"
+      ],
+      "description": "Complete the current workflow successfully, overriding definition output with with. Must be last in its sequence and outside all parallel branches; also stops execution after a containing condition.",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "type": {
+          "const": "end"
+        },
+        "message": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "with": {
+          "type": "object"
+        },
+        "output_schema": {
+          "type": "object",
+          "description": "Validates the entire node output at runtime before downstream nodes execute."
+        }
+      }
+    },
+    "database": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type",
+        "database"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "type": {
+          "const": "database"
+        },
+        "database": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "connection_id",
+            "operation"
+          ],
+          "properties": {
+            "connection_id": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{0,63}$"
+            },
+            "operation": {
+              "enum": [
+                "select",
+                "insert",
+                "update",
+                "delete",
+                "sql",
+                "aggregate"
+              ]
+            },
+            "schema": {
+              "type": "string"
+            },
+            "table": {
+              "type": "string"
+            },
+            "query": {
+              "type": "string",
+              "maxLength": 32768
+            },
+            "parameters": {
+              "type": "array"
+            },
+            "values": {
+              "type": "object"
+            },
+            "filter": {
+              "type": "object"
+            },
+            "pipeline": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "operation": {
+                    "const": "sql"
+                  }
+                }
+              },
+              "then": {
+                "required": [
+                  "query"
+                ]
+              },
+              "else": {
+                "required": [
+                  "table"
+                ]
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "operation": {
+                    "enum": [
+                      "insert",
+                      "update"
+                    ]
+                  }
+                }
+              },
+              "then": {
+                "required": [
+                  "values"
+                ],
+                "properties": {
+                  "values": {
+                    "minProperties": 1
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "operation": {
+                    "enum": [
+                      "update",
+                      "delete"
+                    ]
+                  }
+                }
+              },
+              "then": {
+                "required": [
+                  "filter"
+                ],
+                "properties": {
+                  "filter": {
+                    "minProperties": 1
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "operation": {
+                    "const": "aggregate"
+                  }
+                }
+              },
+              "then": {
+                "required": [
+                  "pipeline"
+                ],
+                "properties": {
+                  "pipeline": {
+                    "minItems": 1
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "output_schema": {
+          "type": "object"
+        }
+      },
+      "description": "External team connection. One attempt; writes may have applied after a timeout. Never embed credentials. SQL values use bound parameters."
+    },
+    "step": {
+      "oneOf": [
+        {"$ref": "#/$defs/integration"},
+        {"$ref": "#/$defs/data-node"},
+        {"$ref": "#/$defs/foreach"},
+        {"$ref": "#/$defs/fail"},
+        {
+          "$ref": "#/$defs/database"
+        },
+        {
+          "$ref": "#/$defs/code"
+        },
+        {
+          "$ref": "#/$defs/email"
+        },
+        {
+          "$ref": "#/$defs/http"
+        },
+        {
+          "$ref": "#/$defs/end"
+        },
+        {
+          "$ref": "#/$defs/activity"
+        },
+        {
+          "$ref": "#/$defs/llm"
+        },
+        {
+          "$ref": "#/$defs/decision"
+        },
+        {
+          "$ref": "#/$defs/subworkflow"
+        },
+        {
+          "$ref": "#/$defs/wait"
+        },
+        {
+          "$ref": "#/$defs/approval"
+        },
+        {
+          "$ref": "#/$defs/callback"
+        },
+        {
+          "$ref": "#/$defs/pause"
+        },
+        {
+          "$ref": "#/$defs/signal"
+        },
+        {
+          "$ref": "#/$defs/condition"
+        },
+        {
+          "$ref": "#/$defs/parallel"
+        }
+      ]
+    }
+  }
+}

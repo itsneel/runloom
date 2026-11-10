@@ -1,0 +1,68 @@
+:host {
+  display: block;
+  position: relative;
+  margin: 10px 0;
+  color: inherit;
+}
+label {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+}
+textarea {
+  box-sizing: border-box;
+  width: 100%;
+  resize: vertical;
+  border: 1px solid var(--rl-border, #535867);
+  border-radius: 8px;
+  background: var(--rl-surface, #fff);
+  color: inherit;
+  padding: 10px;
+  font:
+    12px/1.6 ui-monospace,
+    monospace;
+}
+textarea:focus {
+  outline: 2px solid var(--rl-accent, #7273db);
+  outline-offset: 1px;
+}
+.help {
+  display: block;
+  opacity: 0.65;
+  font-size: 10px;
+  margin-top: 4px;
+}
+.suggestions {
+  position: absolute;
+  z-index: 20;
+  left: 0;
+  right: 0;
+  max-height: 260px;
+  overflow: auto;
+  background: var(--rl-surface, #fff);
+  border: 1px solid var(--rl-border, #535867);
+  border-radius: 8px;
+  box-shadow: 0 8px 30px #0003;
+}
+.suggestions button {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  text-align: left;
+  padding: 9px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.suggestions .active,
+.suggestions button:hover {
+  background: color-mix(in srgb, var(--rl-accent, #7273db) 15%, transparent);
+}
+small {
+  opacity: 0.75;
+}
+.suggestions p {
+  padding: 10px;
+  font-size: 12px;
+}

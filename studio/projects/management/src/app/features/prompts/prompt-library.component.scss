@@ -1,0 +1,54 @@
+.variable {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--rl-border);
+  border-radius: 10px;
+  background: var(--rl-soft);
+}
+.prompt-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: 240px;
+  min-width: 120px;
+}
+.table-wrap table {
+  min-width: 760px;
+}
+.prompt-tag {
+  border: 1px solid var(--rl-border);
+  background: var(--rl-soft);
+  border-radius: 6px;
+  padding: 3px 7px;
+  color: var(--rl-secondary);
+  font-size: 11px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.input-heading {
+  padding: 10px 0;
+}
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: auto;
+}
+.checkbox input {
+  width: auto;
+}
+
+:host input[aria-invalid='true'],
+:host textarea[aria-invalid='true'] {
+  border-color: var(--rl-danger);
+  box-shadow: 0 0 0 1px var(--rl-danger);
+}
+
+.field-error {
+  display: block;
+  margin-top: 6px;
+  color: var(--rl-danger);
+  font-size: 12px;
+  line-height: 1.5;
+}

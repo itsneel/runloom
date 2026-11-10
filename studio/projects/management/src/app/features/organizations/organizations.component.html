@@ -1,0 +1,143 @@
+<runloom-notice
+  *ngIf="state.error"
+  tone="error"
+  [message]="state.error"
+  (dismissed)="state.error = ''"
+/>
+<runloom-notice
+  *ngIf="state.notice"
+  tone="success"
+  [message]="state.notice"
+  (dismissed)="state.notice = ''"
+/>
+<section class="panel identity-panel" *ngIf="auth.organization() as org">
+  <div class="panel-heading">
+    <div>
+      <h2>{{ org.name }}</h2>
+      <p class="muted">
+        Organization ID <code>{{ org.id }}</code>
+      </p>
+    </div>
+    <span class="badge">{{ org.role }}</span>
+  </div>
+  <form class="toolbar rename-form" *ngIf="auth.orgAdmin()" (ngSubmit)="state.saveName()">
+    <label class="search"
+      >Display name<input
+        aria-label="Organization display name"
+        name="rename"
+        [(ngModel)]="state.rename"
+        [disabled]="state.busy || state.loading"
+        maxlength="120"
+        required
+    /></label>
+    <button
+      type="submit"
+      [disabled]="state.busy || state.loading || !state.rename.trim() || state.rename === org.name"
+    >
+      Save name
+    </button>
+  </form>
+  <p class="muted">
+    Renaming keeps the organization ID, workflows and Temporal namespace unchanged.
+  </p>
+</section>
+<section
+  class="panel hierarchy-panel"
+  *ngIf="state.hierarchy as tree"
+  aria-label="Organization hierarchy"
+>
+  <div class="panel-heading">
+    <div>
+      <h2>Organization hierarchy</h2>
+      <p class="muted">One parent level. Each organization keeps its own access and workflows.</p>
+    </div>
+    <span class="badge">{{ tree.children.length }} / {{ tree.max_children }} children</span>
+  </div>
+  <div class="org-tree">
+    <article class="org-row parent" [class.current]="tree.root.id === orgId">
+      <span class="org-mark">P</span>
+      <div>
+        <strong>{{ tree.root.name }}</strong
+        ><small>Parent organization{{ tree.root.id === orgId ? ' · Current' : '' }}</small>
+      </div>
+      <button
+        *ngIf="tree.root.id !== orgId"
+        type="button"
+        [disabled]="!tree.root.role || state.busy"
+        (click)="state.switchTo(tree.root)"
+      >
+        {{ tree.root.role ? 'Switch organization' : 'Membership required' }}
+      </button>
+    </article>
+    <div class="children">
+      <article
+        class="org-row"
+        *ngFor="let child of tree.children"
+        [class.current]="child.id === orgId"
+      >
+        <span class="org-mark">C</span>
+        <div>
+          <strong>{{ child.name }}</strong
+          ><small>Child organization{{ child.id === orgId ? ' · Current' : '' }}</small>
+        </div>
+        <button
+          *ngIf="child.id !== orgId"
+          type="button"
+          [disabled]="!child.role || state.busy"
+          (click)="state.switchTo(child)"
+        >
+          {{ child.role ? 'Switch organization' : 'Membership required' }}
+        </button>
+      </article>
+      <p class="muted" *ngIf="!tree.children.length">No child organizations yet.</p>
+    </div>
+  </div>
+  <p class="muted">
+    Children can see their parent and siblings here. Viewing this tree does not grant access to
+    another organization's data.
+  </p>
+  <p class="notice" *ngIf="tree.root.id !== orgId">
+    Child organizations cannot contain another child organization.
+  </p>
+  <p class="notice" *ngIf="tree.children.length >= tree.max_children">
+    This parent has reached its child limit. A platform administrator can adjust the limit.
+  </p>
+</section>
+<section class="panel create-panel" *ngIf="state.options?.can_create">
+  <h2>Create an organization</h2>
+  <p class="muted">
+    Each account belongs to one organization family. Create your first organization or add a child
+    beneath your parent organization. You become its owner with a General team.
+  </p>
+  <form (ngSubmit)="state.create()" class="stack">
+    <label
+      >Organization name<input
+        aria-label="New organization name"
+        name="organizationName"
+        [(ngModel)]="state.name"
+        [disabled]="state.busy"
+        maxlength="120"
+        required
+    /></label>
+    <label
+      >Parent organization<select
+        aria-label="Parent organization"
+        name="parentOrganization"
+        [(ngModel)]="state.parent"
+        [disabled]="state.busy"
+      >
+        <option *ngIf="state.options?.can_create_root" value="">Independent organization (no parent)</option>
+        <option *ngFor="let parent of state.options?.parents" [value]="parent.id">
+          {{ parent.name }}
+        </option>
+      </select></label
+    >
+    <p class="muted">
+      Child limit: {{ state.options?.max_children }} per parent. Only root organizations can be
+      parents.
+    </p>
+    <button class="primary" type="submit" [disabled]="state.busy || !state.name.trim()">
+      {{ state.busy ? 'Saving…' : 'Create organization' }}
+    </button>
+  </form>
+</section>

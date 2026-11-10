@@ -1,0 +1,48 @@
+{{- range $component, $override := .Values.autoscaling.workloads }}
+{{- if $override.enabled }}
+{{- $settings := mergeOverwrite (deepCopy $.Values.autoscaling.defaults) $override }}
+{{- $container := and $.Values.observability.enabled (has $component (list "api" "auth" "workflows" "management" "worker")) }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "runloom.fullname" $ }}-{{ $component }}
+  labels:
+    {{- include "runloom.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $component }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "runloom.fullname" $ }}-{{ $component }}
+  minReplicas: {{ $settings.minReplicas }}
+  maxReplicas: {{ $settings.maxReplicas }}
+  metrics:
+    {{- if $settings.targetCPUUtilizationPercentage }}
+    - type: {{ if $container }}ContainerResource{{ else }}Resource{{ end }}
+      {{ if $container }}containerResource{{ else }}resource{{ end }}:
+        {{- if $container }}
+        container: {{ $component }}
+        {{- end }}
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ $settings.targetCPUUtilizationPercentage }}
+    {{- end }}
+    {{- if $settings.targetMemoryUtilizationPercentage }}
+    - type: {{ if $container }}ContainerResource{{ else }}Resource{{ end }}
+      {{ if $container }}containerResource{{ else }}resource{{ end }}:
+        {{- if $container }}
+        container: {{ $component }}
+        {{- end }}
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ $settings.targetMemoryUtilizationPercentage }}
+    {{- end }}
+  {{- with $settings.behavior }}
+  behavior:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}
+{{- end }}

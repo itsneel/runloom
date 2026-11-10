@@ -1,0 +1,321 @@
+@if (!auth.ready() || !startupReady() || (auth.signedIn() && !initialRouteReady())) {
+  <main class="welcome">
+    <div class="account-card">
+      <h1>Runloom</h1>
+      <p>Connecting to your workspace…</p>
+    </div>
+  </main>
+} @else if (!auth.signedIn()) {
+  <main class="welcome">
+    <section class="account-card">
+      <span class="brand" aria-label="Runloom">RL</span>
+      <p class="eyebrow">YOUR TEAM'S WORKFLOW STUDIO</p>
+      <h1>Your workspace awaits.</h1>
+      <p>You’re signed out. Sign in to return to your team’s workflows.</p>
+      @if (error) {
+        <runloom-notice
+          [message]="error"
+          tone="error"
+          title="Unable to sign in"
+          (dismissed)="error = ''"
+        />
+      }
+      <button class="primary" [disabled]="busy || !auth.config" (click)="signIn()">
+        Sign in with email
+      </button>
+      @if (auth.config?.googleEnabled) {
+        <button class="google" [disabled]="busy" (click)="signIn(true)">
+          Continue with Google
+        </button>
+      }
+      <div class="account-links">
+        <button [disabled]="busy || !auth.config" (click)="register()">Create an account</button
+        ><button [disabled]="!auth.config" (click)="auth.forgotPassword()">Forgot password?</button>
+      </div>
+      <small>Sign-in and email verification open on our secure account page.</small>
+      <runloom-theme-picker />
+    </section>
+  </main>
+} @else {
+  <div
+    class="workspace-shell"
+    [class.platform-mode]="platformMode"
+    [class.sidebar-collapsed]="sidebarCollapsed"
+    [class.mobile-open]="mobileOpen"
+  >
+    @if (mobileOpen) {
+      <button
+        class="sidebar-backdrop"
+        aria-label="Close navigation"
+        (click)="closeMobile()"
+      ></button>
+    }
+    @if (!platformMode) {
+    <aside
+      #sidebar
+      id="workspace-sidebar"
+      class="workspace-sidebar"
+      aria-label="Workspace sidebar"
+      [attr.inert]="mobileViewport && !mobileOpen ? '' : null"
+      (mouseover)="showRailTooltip($event)"
+      (mouseout)="deferHideRailTooltip()"
+      (focusin)="showRailTooltip($event)"
+      (focusout)="hideRailTooltip()"
+      (click)="hideRailTooltip()"
+      (scroll)="refreshRailTooltip()"
+    >
+      <div class="sidebar-brand">
+        <span class="brand">RL</span><strong>Runloom</strong
+        ><button
+          class="icon-button sidebar-toggle"
+          [attr.aria-label]="
+            mobileViewport
+              ? 'Close sidebar'
+              : sidebarCollapsed
+                ? 'Expand sidebar'
+                : 'Collapse sidebar'
+          "
+          [attr.aria-expanded]="mobileViewport ? mobileOpen : !sidebarCollapsed"
+          aria-controls="workspace-sidebar"
+          (click)="toggleSidebar()"
+        >
+          <runloom-icon name="sidebar" />
+        </button>
+      </div>
+      <div class="sidebar-navigation" (scroll)="refreshRailTooltip()">
+      <nav class="primary-navigation" aria-label="Workspace">
+        <button
+          [class.active]="!manage && !projectsView && auth.team()"
+          [attr.aria-current]="!manage && !projectsView && auth.team() ? 'page' : null"
+          aria-label="Workflows"
+          [disabled]="busy || !auth.team()"
+          (click)="openWorkflowDashboard()"
+        >
+          <runloom-icon name="workflow" /><span class="nav-text">Workflows</span>
+        </button>
+        <button
+          [class.active]="projectsView && auth.team()"
+          [attr.aria-current]="projectsView && auth.team() ? 'page' : null"
+          aria-label="Projects"
+          [disabled]="busy || !auth.team()"
+          (click)="openProjects()"
+        >
+          <runloom-icon name="folder" /><span class="nav-text">Projects</span>
+        </button>
+        @if (platformAccess.identity().role) {
+          <button
+            aria-label="Platform console"
+            [class.active]="platformMode"
+            [attr.aria-current]="platformMode ? 'page' : null"
+            [disabled]="busy"
+            (click)="openPlatform()"
+          >
+            <runloom-icon name="shield" /><span class="nav-text">Platform console</span>
+          </button>
+        }
+      </nav>
+      <nav class="admin-navigation" aria-label="Manage workspace">
+        <h2 class="management-heading nav-label">Management</h2>
+        <div id="management-links" class="management-links">
+        <div class="management-group" role="group" aria-labelledby="management-workflows-heading">
+        <h3 id="management-workflows-heading" class="nav-label management-group-heading">Workflow operations</h3>
+        <button aria-label="Schedules" [class.active]="manage && managementSection === 'schedules'" [attr.aria-current]="manage && managementSection === 'schedules' ? 'page' : null" [disabled]="busy || !auth.team()" (click)="openManagement('schedules')"><runloom-icon name="calendar" /><span class="nav-text">Schedules</span></button>
+        <button aria-label="Prompt library" [class.active]="manage && managementSection === 'prompts'" [attr.aria-current]="manage && managementSection === 'prompts' ? 'page' : null" [disabled]="busy || !auth.team()" (click)="openManagement('prompts')"><runloom-icon name="edit" /><span class="nav-text">Prompt library</span></button>
+        <button aria-label="Run history" [class.active]="manage && managementSection === 'runs'" [attr.aria-current]="manage && managementSection === 'runs' ? 'page' : null" [disabled]="busy || !auth.team()" (click)="openManagement('runs')"><runloom-icon name="runs" /><span class="nav-text">Run history</span></button>
+        </div>
+        <div class="management-group" role="group" aria-labelledby="management-costs-heading">
+        <h3 id="management-costs-heading" class="nav-label management-group-heading">Costs</h3>
+        <button
+          aria-label="Cost analytics"
+          [class.active]="manage && managementSection === 'analytics'"
+          [attr.aria-current]="manage && managementSection === 'analytics' ? 'page' : null"
+          [disabled]="busy || !auth.organization()"
+          (click)="openManagement('analytics')"
+        >
+          <runloom-icon name="analytics" /><span class="nav-text">Cost analytics</span>
+        </button>
+        <button aria-label="LLM budgets" [class.active]="manage && managementSection === 'budgets'" [attr.aria-current]="manage && managementSection === 'budgets' ? 'page' : null" [disabled]="busy || !auth.team()" (click)="openManagement('budgets')"><runloom-icon name="budget" /><span class="nav-text">LLM budgets</span></button>
+        </div>
+        <div class="management-group" role="group" aria-labelledby="management-organization-heading">
+        <h3 id="management-organization-heading" class="nav-label management-group-heading">Organization</h3>
+        <button
+          aria-label="Teams & members"
+          [class.active]="manage && managementSection === 'teams'"
+          [attr.aria-current]="manage && managementSection === 'teams' ? 'page' : null"
+          [disabled]="busy"
+          (click)="openManagement('teams')"
+        >
+          <runloom-icon name="team" /><span class="nav-text">Teams & members</span>
+        </button>
+        <button
+          aria-label="Organization"
+          [class.active]="manage && managementSection === 'organization'"
+          [attr.aria-current]="manage && managementSection === 'organization' ? 'page' : null"
+          [disabled]="busy"
+          (click)="openManagement('organization')"
+        >
+          <runloom-icon name="building" /><span class="nav-text">Organization</span>
+        </button>
+        </div>
+        @if (auth.teamAdmin()) {
+          <div class="management-group" role="group" aria-labelledby="management-secrets-heading">
+          <h3 id="management-secrets-heading" class="nav-label management-group-heading">Secrets &amp; access</h3>
+          <button
+            aria-label="Service accounts"
+            [class.active]="manage && managementSection === 'accounts'"
+            [attr.aria-current]="manage && managementSection === 'accounts' ? 'page' : null"
+            [disabled]="busy"
+            (click)="openManagement('accounts')"
+          >
+            <runloom-icon name="key" /><span class="nav-text">Service accounts</span>
+          </button>
+          <button
+            aria-label="Workflow secrets"
+            [class.active]="manage && managementSection === 'secrets'"
+            [attr.aria-current]="manage && managementSection === 'secrets' ? 'page' : null"
+            [disabled]="busy"
+            (click)="openManagement('secrets')"
+          >
+            <runloom-icon name="shield" /><span class="nav-text">Workflow secrets</span>
+          </button>
+          <button aria-label="Database connections" [class.active]="manage && managementSection === 'connections'" [attr.aria-current]="manage && managementSection === 'connections' ? 'page' : null" [disabled]="busy || !auth.team()" (click)="openManagement('connections')"><runloom-icon name="arrow" /><span class="nav-text">Connections</span></button>
+          </div>
+        }
+        </div>
+      </nav>
+      </div>
+      <div class="sidebar-footer">
+      <button type="button" class="documentation-link" aria-label="Consumer API documentation" title="Open Consumer API documentation in a new tab" (click)="openDocumentation('consumer')">
+        <svg class="documentation-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6Z" />
+          <path d="M14 2v6h6M8 13h8M8 17h5" />
+        </svg>
+        <span class="nav-text">Consumer API docs</span>
+      </button>
+      <button type="button" class="documentation-link" aria-label="Documentation" title="Open documentation in a new tab" (click)="openDocumentation()">
+        <svg class="documentation-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+          <path d="M12 5v15M12 5C9 3 5 3 2 4v15c3-1 7-1 10 1 3-2 7-2 10-1V4c-3-1-7-1-10 1Z" />
+        </svg>
+        <span class="nav-text">Documentation</span>
+      </button>
+      <runloom-theme-picker [compact]="sidebarCollapsed && !mobileViewport" />
+      <div class="sidebar-profile">
+        <span class="avatar">{{
+          initials(auth.profile()?.user?.name || auth.profile()?.user?.email || '')
+        }}</span>
+        <div>
+          <strong>{{ auth.profile()?.user?.name || 'Your account' }}</strong
+          ><small>{{ auth.profile()?.user?.email }}</small>
+        </div>
+        <button class="icon-button" aria-label="Sign out" [disabled]="busy" (click)="logout()">
+          <runloom-icon name="logout" />
+        </button>
+      </div>
+      </div>
+    </aside>
+    }
+    @if (railTooltip) {
+      <div
+        class="rail-tooltip"
+        role="tooltip"
+        [style.left.px]="railTooltip.left"
+        [style.top.px]="railTooltip.top"
+        (mouseenter)="keepRailTooltip()"
+        (mouseleave)="hideRailTooltip()"
+      >
+        {{ railTooltip.label }}
+      </div>
+    }
+    <div class="workspace-content" [attr.inert]="mobileOpen ? '' : null">
+      @if (!platformMode) {
+        <header class="content-header" [class.switcher-open]="workspaceSwitcherOpen">
+          @if (mobileViewport && !mobileOpen) {
+          <button
+            #mobileToggle
+            aria-controls="workspace-sidebar"
+            class="icon-button"
+            aria-label="Toggle workspace sidebar"
+            [attr.aria-expanded]="mobileViewport ? mobileOpen : !sidebarCollapsed"
+            (click)="toggleSidebar()"
+          >
+            <runloom-icon name="sidebar" /></button>
+          }
+          <div class="workspace-crumb">
+            <button
+              #switcherToggle
+              type="button"
+              class="workspace-summary"
+              aria-label="Switch organization or team"
+              aria-controls="workspace-switcher"
+              [attr.aria-expanded]="workspaceSwitcherOpen"
+              (click)="toggleWorkspaceSwitcher()"
+            >
+              <runloom-icon name="building" />
+              <span class="crumb-name">{{ auth.organization()?.name || 'Choose organization' }}</span>
+              <span class="separator" aria-hidden="true">/</span>
+              <span class="crumb-name">{{ auth.team()?.name || 'Choose team' }}</span>
+              <runloom-icon class="workspace-chevron" [name]="workspaceSwitcherOpen ? 'chevron-up' : 'chevron-down'" />
+            </button>
+            <div id="workspace-switcher" class="workspace-switcher" [hidden]="!workspaceSwitcherOpen">
+              <label
+                >Organization<select
+                  #organizationSelect
+                  aria-label="Organization"
+                  [disabled]="busy"
+                  [ngModel]="auth.organizationId()"
+                  (change)="selectOrg($any($event.target).value, $any($event.target))"
+                >
+                  <option value="" disabled>Select organization</option>
+                  @for (org of organizationChoices; track org.id) {
+                    <option [value]="org.id">{{ org.label }}</option>
+                  }
+                </select></label
+              >
+              <label
+                >Team<select
+                  aria-label="Team"
+                  [disabled]="busy"
+                  [ngModel]="auth.teamId()"
+                  (change)="selectTeam($any($event.target).value, $any($event.target))"
+                >
+                  <option value="" disabled>Select team</option>
+                  @for (team of auth.organization()?.teams || []; track team.id) {
+                    <option [value]="team.id">{{ team.name }} · {{ team.role }}</option>
+                  }
+                </select></label
+              >
+            </div>
+          </div>
+          <span class="separator" aria-hidden="true">/</span>
+          <strong class="current-page" aria-current="page">{{ pageTitle }}</strong>
+        </header>
+      }
+      @if (error || notice) {
+        <div class="workspace-feedback">
+          @if (error) {
+            <runloom-notice [message]="error" tone="error" (dismissed)="error = ''" />
+          }
+          @if (notice) {
+            <runloom-notice [message]="notice" tone="success" (dismissed)="notice = ''" />
+          }
+        </div>
+      }
+      <router-outlet [routerOutletData]="{
+        navigationExpanded: mobileViewport ? mobileOpen : !sidebarCollapsed
+      }" />
+    </div>
+  </div>
+}
+<runloom-dialogs />
+@if (auth.signedIn() && !platformMode) {
+  <runloom-assistant
+    [class.navigation-covered]="mobileOpen"
+    [attr.inert]="mobileOpen ? '' : null"
+    [workflowId]="manage ? undefined : bridge.workflow()?.assistantContext?.workflowId"
+    [workflowName]="manage ? '' : bridge.workflow()?.assistantContext?.name || ''"
+    [workflowSaved]="manage || (bridge.workflow()?.assistantContext?.saved ?? true)"
+    [canApply]="(manage || !bridge.workflow()?.assistantContext) ? auth.canEdit() : (bridge.workflow()?.assistantContext?.canApply ?? false)"
+    [prepareWorkflow]="prepareAssistantDraft"
+    [applyWorkflowDraft]="applyAssistantDraft"
+    (draftChanged)="bridge.workflow()?.refreshAuthoringDraft?.($event)" />
+}

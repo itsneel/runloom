@@ -1,0 +1,9 @@
+:host { display:block; font-size:12px; }
+    label { display:block; margin:14px 0; }
+    label span { display:block; margin-bottom:7px; font-weight:600; }
+    textarea { box-sizing:border-box; width:100%; resize:vertical; border:1px solid var(--rl-border); border-radius:8px; padding:10px; background:var(--rl-surface); color:var(--rl-ink); font:12px/1.6 monospace; tab-size:2; }
+    p { color:var(--rl-secondary); line-height:1.6; }
+    button { background:var(--rl-accent); color:var(--rl-on-accent); border:0; border-radius:8px; padding:10px 14px; cursor:pointer; }
+    button:disabled { opacity:.5; cursor:default; }
+    pre { white-space:pre-wrap; overflow-wrap:anywhere; max-height:280px; overflow:auto; background:var(--rl-soft); padding:12px; border-radius:8px; }
+    .error { color:var(--rl-danger); }

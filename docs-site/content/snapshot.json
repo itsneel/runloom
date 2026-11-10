@@ -1,0 +1,274 @@
+{
+  "docs/projects.md": {
+    "destination": "content/imported/projects.md",
+    "sha256": "8815edf020c1fc1efc426771303960748ed4b9a4f569793e669944139f2f01a7"
+  },
+  "docs/workflow-editing.md": {
+    "destination": "content/imported/workflow-editing.md",
+    "sha256": "9f171a24cd71182be18ba2843514582c2d269ec89bed5d3b8f132e92f32e6092"
+  },
+  "docs/json-contract.md": {
+    "destination": "content/imported/json-contract.md",
+    "sha256": "1d9223ae07c119ea2a8116ade7d249390bc546e1e18b1e9d220a41ce0d474277"
+  },
+  "docs/versioning.md": {
+    "destination": "content/imported/versioning.md",
+    "sha256": "271ec2f6d827423ef4272d0ea79e9774b4bda9bdd50ed4600c2ca46f47f738a7"
+  },
+  "docs/schedules-and-subworkflows.md": {
+    "destination": "content/imported/schedules-and-subworkflows.md",
+    "sha256": "5005a3ebbfb3dfa855fc685ea74da810c079a3c1f611bd1802ba08a249fe6198"
+  },
+  "docs/assistant.md": {
+    "destination": "content/imported/assistant.md",
+    "sha256": "bc1c8965077e73ed271560bceb96efef81ec8bc11053e268d90f160055569269"
+  },
+  "docs/database-connections.md": {
+    "destination": "content/imported/database-connections.md",
+    "sha256": "da03549d43ccf62d4eafc9308b21e95566c173827f75066076b31ace50991c7f"
+  },
+  "docs/api-nodes-and-secrets.md": {
+    "destination": "content/imported/api-nodes-and-secrets.md",
+    "sha256": "01f1347079a2dfd7a6629cc507f46d5989d87bd08edb6fbac3582573c26fce9b"
+  },
+  "docs/email-node.md": {
+    "destination": "content/imported/email-node.md",
+    "sha256": "d73e732d6455308491a6e8b2e08135212e3faf65bd043013c6b55bf931bed1ca"
+  },
+  "docs/custom-code.md": {
+    "destination": "content/imported/custom-code.md",
+    "sha256": "3ce2235976be58e05f9a0b44b14a778fb53d771622542c82ab3cc507a41358e5"
+  },
+  "docs/authentication.md": {
+    "destination": "content/imported/authentication.md",
+    "sha256": "4b3fd8105a176cf579f65c737b0f9df22a0c763efbf80edae6f1b60e5cd26246"
+  },
+  "docs/llm-costs.md": {
+    "destination": "content/imported/llm-costs.md",
+    "sha256": "3f918de4b0d9d41bf5150bd439249b16f4b50e42917a087556fc4dd69db5d25c"
+  },
+  "docs/platform-administration.md": {
+    "destination": "content/imported/platform-administration.md",
+    "sha256": "98ae7fd656c753dffac8b67b0ac6b4331cda8d59d4fb9375296db709654814dc"
+  },
+  "docs/api.md": {
+    "destination": "content/imported/api.md",
+    "sha256": "655503b9e5864a720a985fdbeb16acee98d2b0e2b0a0d34a5bc54db8b7a0f817"
+  },
+  "docs/consumer-api.md": {
+    "destination": "content/imported/consumer-api.md",
+    "sha256": "f948ca42546e25b7f224ad44cb0804e0afd4ba6cd01547084bda74be2f6fa937"
+  },
+  "docs/studio-api.md": {
+    "destination": "content/imported/studio-api.md",
+    "sha256": "3ed8812def8d8704cb38ac75cac493e15203153481324a809706634bca669fbf"
+  },
+  "docs/workflow-api.md": {
+    "destination": "content/imported/workflow-api.md",
+    "sha256": "85296ab759ae70005cf981cd44c6c8044944f2f73c983d07b4c6461eb600ebb4"
+  },
+  "docs/deployment.md": {
+    "destination": "content/imported/deployment.md",
+    "sha256": "7cd4f6f32d67e36c95c3ea4e71131906529fcc54c57b445ee9306135cb90d067"
+  },
+  "docs/local-development.md": {
+    "destination": "content/imported/local-development.md",
+    "sha256": "910f21c76e22739a2a5bf80df9f36ccf93e4c683dbadfb36505b291537858b1b"
+  },
+  "docs/service-split.md": {
+    "destination": "content/imported/service-split.md",
+    "sha256": "9dd3a4e4d09b052705efb9cef533e644a2bd9a468276220ba401044ba8de9460"
+  },
+  "docs/database.md": {
+    "destination": "content/imported/database.md",
+    "sha256": "ed00d98d6265623491d5174729087fffe1e73be89480ee6a9e1c6842157b9e46"
+  },
+  "docs/temporal-organizations.md": {
+    "destination": "content/imported/temporal-organizations.md",
+    "sha256": "da62b147eb90e16af205f8c028cba32657c83ace123076333b8082565fb0a96e"
+  },
+  "docs/observability.md": {
+    "destination": "content/imported/observability.md",
+    "sha256": "e7d01dc0db64c240e6e40985d62887fd67d92726b23f1ab24e76dab7eee72443"
+  },
+  "docs/signal-handlers.md": {
+    "destination": "content/sources/docs/signal-handlers.md",
+    "sha256": "f0629ef4ce7d259ef54ad3dbe9098093cacf23a87a0dd2218218163a2ebd62ed"
+  },
+  "examples/typed-prompt.json": {
+    "destination": "content/sources/examples/typed-prompt.json",
+    "sha256": "ef1dc602c7b9f1850955abc61b7765e33fe96aca6368472f4b104d93778405e7"
+  },
+  "examples/ai-decision-modes.json": {
+    "destination": "content/sources/examples/ai-decision-modes.json",
+    "sha256": "ab39fbf112838b6761612d50f1829dc35c35305ca6c2d6bb4aa0e54c0d47ca6b"
+  },
+  "examples/data-building.json": {
+    "destination": "content/sources/examples/data-building.json",
+    "sha256": "ada778c449013fd6bd8bf54e3c9a701fbe5624eb1c6e955ce3f5d93df41ee142"
+  },
+  "examples/README.md": {
+    "destination": "content/sources/examples/README.md",
+    "sha256": "9fe3014978a521aec5b9c7d2a0c877b8892f031469960a3b13c75f344d25feab"
+  },
+  "examples/parallel-greeting.json": {
+    "destination": "content/sources/examples/parallel-greeting.json",
+    "sha256": "526d27e69c3f9dc87c714755885108afaefb59446e2cc5d64c2015ca75af70c6"
+  },
+  "examples/parent-with-parallel-subworkflows.json": {
+    "destination": "content/sources/examples/parent-with-parallel-subworkflows.json",
+    "sha256": "31c55af4bafa4564c5f344059d762234a30148ffe2ec1c2c571b2b19712587a1"
+  },
+  "examples/reusable-greeting.json": {
+    "destination": "content/sources/examples/reusable-greeting.json",
+    "sha256": "5a09d8de414bf170da5295d7e4cbf905103feb015d47e7460621272663e60b51"
+  },
+  "examples/parent-with-subworkflow.json": {
+    "destination": "content/sources/examples/parent-with-subworkflow.json",
+    "sha256": "b9539bc5dc134350e5cc21e151b1189e502518738ee96f255e7f080c342d3ff8"
+  },
+  "spec/schedule.schema.json": {
+    "destination": "content/sources/spec/schedule.schema.json",
+    "sha256": "66500b25451732b444d71ac6eee4e12df244f652a2113c3503e5fee52256bd34"
+  },
+  "compose/config/assistant.yaml": {
+    "destination": "content/sources/compose/config/assistant.yaml",
+    "sha256": "5d5bbb7ac68f07d6ee38f408cf1d747d5006b8799cf95c2d9492bfff7dc60008"
+  },
+  "server/assistant/internal/chat/guardrails.txt": {
+    "destination": "content/sources/server/assistant/internal/chat/guardrails.txt",
+    "sha256": "2207ebb69b1166217c7f9ceb63abab8866612ca2e149315c526fa823e59da00a"
+  },
+  "server/assistant/api/openapi.yaml": {
+    "destination": "content/sources/server/assistant/api/openapi.yaml",
+    "sha256": "209fc832bd3301c7d22c26b4521174bda21a67f647929b1e29dab29fb7423da2"
+  },
+  "spec/workflow.schema.json": {
+    "destination": "content/contracts/workflow.schema.json",
+    "sha256": "2852056df0c7820bd8d986c07ede0a8b60f2bd321e0ff181024e9309ad52546b"
+  },
+  "examples/database-query.json": {
+    "destination": "content/sources/examples/database-query.json",
+    "sha256": "1d90682fe52447fc466c899cb19c0d8fa1f69274264bfdd179308b51280a3396"
+  },
+  "examples/external-api.json": {
+    "destination": "content/sources/examples/external-api.json",
+    "sha256": "2f2455a4de58a1e31e545e173f5925dc98781a61d2dadc4dd54a3e57eeb3fd53"
+  },
+  "charts/runloom/README.md": {
+    "destination": "content/sources/charts/runloom/README.md",
+    "sha256": "3717cded6249a0d499495fb546b5c9d64c6d16929fbb8bf8aebf8eb439b4705a"
+  },
+  "studio/README.md": {
+    "destination": "content/sources/studio/README.md",
+    "sha256": "b8d9831a71eed2fe853a427e4fbdf1c0a31d2ed14afb80ca19a594cc539eacc6"
+  },
+  "examples/email-notification.json": {
+    "destination": "content/sources/examples/email-notification.json",
+    "sha256": "0468bdc9e35360df8e7ada6c5ac3c24f213bc64467b69211b3f9d63de6f6ea07"
+  },
+  "examples/javascript-transform.json": {
+    "destination": "content/sources/examples/javascript-transform.json",
+    "sha256": "a65238f5dceab25e6a6a3ef4b696ad3a1e4de9ab4a45a87930de1bad12d30d4c"
+  },
+  "examples/inputs/order.json": {
+    "destination": "content/sources/examples/inputs/order.json",
+    "sha256": "2da295b3f2d902ed3ab3a576a6c23a410be0c50c3ec661a9526b16716ebd8a33"
+  },
+  "deploy/keycloak/runloom-realm.json": {
+    "destination": "content/sources/deploy/keycloak/runloom-realm.json",
+    "sha256": "b1fd76291b19f9dd86163d3d40aca956c545c136ac57d0bc3ade94de85ac5af1"
+  },
+  "deploy/llm-pricing.example.json": {
+    "destination": "content/sources/deploy/llm-pricing.example.json",
+    "sha256": "4a794de9001c42f75d13bc46e72c4dbccb9bc1bfccb8194d7d21d05e3ebbf6dc"
+  },
+  "server/workflows/internal/api/studio.openapi.json": {
+    "destination": "content/contracts/studio.json",
+    "sha256": "b10c624dbf671fc85745136b8ddec4a82dfc9dd2b99a388ebc120bf743d79e79"
+  },
+  "server/workflows/internal/api/consumer.openapi.json": {
+    "destination": "content/contracts/consumer.json",
+    "sha256": "04188957deab9c3480e03e0c0e65a6d664f77cfdb88393ed0a512da27c9c44c6"
+  },
+  "CONTRIBUTING.md": {
+    "destination": "content/sources/CONTRIBUTING.md",
+    "sha256": "0833faa5c741018a17720a79396c37a6afc4560e2ea70ed1ea646b9daff788ec"
+  },
+  "server/workflows/internal/api/consumer.go": {
+    "destination": "content/sources/server/workflows/internal/api/consumer.go",
+    "sha256": "f8fb754d82814565b6b5e3aa2bfced8f90c440a65cad90fd00b79825f1c9b64d"
+  },
+  "server/workflows/internal/consumer/model.go": {
+    "destination": "content/sources/server/workflows/internal/consumer/model.go",
+    "sha256": "fe1f0d09d34106b8162c3992170eae6a4e88cd87622b5da25d002f2692a51295"
+  },
+  "server/workflows/internal/api/gateway.go": {
+    "destination": "content/sources/server/workflows/internal/api/gateway.go",
+    "sha256": "0c21a84d48942c828764391b6cf9ad35422a29bb744d7d86a462d7f7cd1940d0"
+  },
+  "server/auth/internal/api/service_accounts.go": {
+    "destination": "content/sources/server/auth/internal/api/service_accounts.go",
+    "sha256": "39b171fab672ec590d9778d5f3e5dc5bd9af07bd161f206179607ce496b85934"
+  },
+  "server/workflows/internal/api/consumer_test.go": {
+    "destination": "content/sources/server/workflows/internal/api/consumer_test.go",
+    "sha256": "724a8ead639f80a74ee414dba9fbb041b5c9ba22806876911a1c567d478d20d7"
+  },
+  "server/workflows/internal/api/server.go": {
+    "destination": "content/sources/server/workflows/internal/api/server.go",
+    "sha256": "d76753925a57a34157f5396b4a75378ca3b8963f20a633c175f7821493342274"
+  },
+  "server/workflows/internal/api/gateway_test.go": {
+    "destination": "content/sources/server/workflows/internal/api/gateway_test.go",
+    "sha256": "ec6e70b67b7cf88a2c6f66debd136addb3baf5975f046dd9dece65961181ffb4"
+  },
+  "server/workflows/internal/api/api_version_test.go": {
+    "destination": "content/sources/server/workflows/internal/api/api_version_test.go",
+    "sha256": "c6adf476a0254435cc6a4e5db6e92eb9955f0c48714214949678b74651813ccb"
+  },
+  "studio/libraries/platform/README.md": {
+    "destination": "content/sources/studio/libraries/platform/README.md",
+    "sha256": "44279aeadf0c5acb5cbbbba086a73359d9e5de526bea7b4069f1d028ec687e55"
+  },
+  "docs/upgrading.md": {
+    "destination": "content/sources/docs/upgrading.md",
+    "sha256": "9a41ad039b0f4ed28c834bdfefb4a5617edd7d4a831ed862f90fbe70166215c8"
+  },
+  "compose/config/README.md": {
+    "destination": "content/sources/compose/config/README.md",
+    "sha256": "2e059007f059cbbb0d90ddec97a453904f45ac31a4faf6b6a81dc72579b4c469"
+  },
+  "config.example.yaml": {
+    "destination": "content/sources/config.example.yaml",
+    "sha256": "4ac4545e6222db9ea9029421cb23221f99429dd13ee58e836e7a2adfc767d792"
+  },
+  "charts/runloom/values-production.yaml": {
+    "destination": "content/sources/charts/runloom/values-production.yaml",
+    "sha256": "50db417a82a328430e26b55280ce6415095872333f07bcbfc2190d22919722ec"
+  },
+  "compose/compose.security.yaml": {
+    "destination": "content/sources/compose/compose.security.yaml",
+    "sha256": "2be09c4a88de5724ebb80b32a521d5862ecdeb9c82d303d0a9674c0d34c298f9"
+  },
+  "sdk/go-auth/README.md": {
+    "destination": "content/sources/sdk/go-auth/README.md",
+    "sha256": "f919e8586c3157bea76bef54ca085e064c438a0ca5dc7119bab5db616d21e08d"
+  },
+  "scripts/services-smoke.mjs": {
+    "destination": "content/sources/scripts/services-smoke.mjs",
+    "sha256": "d1c67c6939a77db5fba75c98da3917ba5376c4d953f0f99d8e36d59bb8e58f43"
+  },
+  "server/workflows/internal/services/tests/llm_live_test.go": {
+    "destination": "content/sources/server/workflows/internal/services/tests/llm_live_test.go",
+    "sha256": "143b25afe661506ce6d1092438e72821bac7b26f609623f94c6a6b448d5d6037"
+  },
+  "server/auth/internal/api/platform.openapi.json": {
+    "destination": "content/contracts/platform.json",
+    "sha256": "f390a034cfad9808f5efd2e8b254de4c61fb4022b326288dd74da77f74188a19"
+  },
+  "LICENSE": {
+    "destination": "LICENSE",
+    "sha256": "b7cb9c87fc97a12d1af0a858ca12f077704994582aab28bfcbb7f8116f8f0604"
+  }
+}

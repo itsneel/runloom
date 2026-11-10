@@ -1,0 +1,22 @@
+{
+  "name": "@runloom/api-docs-tools",
+  "version": "1.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node --test tests/*.test.mjs && node build.mjs --check",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,mjs,cjs,html,scss,css,json}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,mjs,cjs,html,scss,css,json}\""
+  },
+  "devDependencies": {
+    "@apidevtools/swagger-parser": "13.1.0",
+    "swagger-ui-dist": "5.33.1",
+    "prettier": "3.9.9"
+  },
+  "engines": {
+    "node": "26.13.0"
+  },
+  "packageManager": "npm@11.20.0"
+}

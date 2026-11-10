@@ -1,0 +1,108 @@
+@if (mobile && !open) {
+  <button
+    #mobileToggle
+    class="mobile-toggle icon-button"
+    type="button"
+    aria-label="Open platform navigation"
+    aria-controls="platform-sidebar"
+    aria-expanded="false"
+    (click)="toggle()"
+  >
+    <runloom-icon name="sidebar" />
+  </button>
+}
+@if (mobile && open) {
+  <button
+    class="navigation-backdrop"
+    type="button"
+    aria-label="Close platform navigation backdrop"
+    tabindex="-1"
+    (click)="close(true)"
+  ></button>
+}
+<aside
+  id="platform-sidebar"
+  [class.is-collapsed]="collapsed && !mobile"
+  [class.is-open]="open"
+  [attr.inert]="mobile && !open ? '' : null"
+  aria-label="Platform sidebar"
+  (mouseover)="showRailTooltip($event)"
+  (mouseout)="deferHideRailTooltip()"
+  (focusin)="showRailTooltip($event)"
+  (focusout)="hideRailTooltip()"
+  (click)="hideRailTooltip()"
+>
+  <div class="sidebar-brand">
+    <span class="brand">RL</span><strong class="nav-label">Runloom</strong
+    ><button
+      #navigationToggle
+      class="icon-button"
+      type="button"
+      [attr.aria-label]="
+        mobile
+          ? 'Close platform navigation'
+          : collapsed
+            ? 'Expand platform navigation'
+            : 'Collapse platform navigation'
+      "
+      aria-controls="platform-sidebar"
+      [attr.aria-expanded]="mobile ? open : !collapsed"
+      (click)="mobile ? close(true) : toggle()"
+    >
+      <runloom-icon name="sidebar" />
+    </button>
+  </div>
+  <div class="platform-context" [attr.data-tooltip]="roleLabel">
+    <runloom-icon name="shield" />
+    <div class="nav-label">
+      <strong>Platform console</strong><small>{{ roleLabel }}</small>
+    </div>
+  </div>
+  <nav aria-label="Platform navigation" (scroll)="hideRailTooltip()">
+    <h2 class="nav-label">PLATFORM</h2>
+    @for (tab of sections; track tab.id) {
+      @if (access.can(tab.permission)) {
+        <a
+          [routerLink]="['/platform', tab.id]"
+          [class.active]="section === tab.id"
+          [attr.aria-current]="section === tab.id ? 'page' : null"
+          [attr.aria-label]="tab.label"
+          (click)="close()"
+          ><runloom-icon [name]="tab.icon" /><span class="nav-label">{{ tab.label }}</span></a
+        >
+      }
+    }
+  </nav>
+  <footer>
+    @if (auth.organizations().length) {
+      <a class="studio-link" routerLink="/workflows" aria-label="Back to Studio" (click)="close()"
+        ><runloom-icon name="workflow" /><span class="nav-label">Back to Studio</span></a
+      >
+    }
+    <runloom-theme-picker [compact]="collapsed && !mobile" />
+    <div class="sidebar-profile">
+      <span class="avatar" aria-hidden="true" [attr.data-tooltip]="auth.profile()?.user?.email">{{
+        auth.profile()?.user?.name?.slice(0, 2)?.toUpperCase() || 'RL'
+      }}</span>
+      <div class="nav-label">
+        <strong>{{ auth.profile()?.user?.name || roleLabel }}</strong
+        ><small>{{ auth.profile()?.user?.email }}</small>
+      </div>
+      <button class="icon-button" type="button" aria-label="Sign out" (click)="auth.logout()">
+        <runloom-icon name="logout" />
+      </button>
+    </div>
+  </footer>
+</aside>
+@if (railTooltip) {
+  <div
+    class="rail-tooltip"
+    role="tooltip"
+    [style.left.px]="railTooltip.left"
+    [style.top.px]="railTooltip.top"
+    (mouseenter)="keepRailTooltip()"
+    (mouseleave)="deferHideRailTooltip()"
+  >
+    {{ railTooltip.label }}
+  </div>
+}

@@ -1,0 +1,252 @@
+<runloom-notice *ngIf="error" [message]="error" tone="error" (dismissed)="error = ''" />
+<p class="empty" *ngIf="!teamId">Choose a team to view its workflow runs.</p>
+<ng-container *ngIf="teamId">
+  <div class="metrics" aria-label="Filtered recent run summary">
+    <div class="metric">
+      <small>Completed · filtered runs</small><strong>{{ completed }}</strong>
+    </div>
+    <div class="metric">
+      <small>Open · includes paused / waiting</small><strong>{{ openCount }}</strong>
+    </div>
+    <div class="metric">
+      <small>Failed or timed out · filtered runs</small><strong>{{ failed }}</strong>
+    </div>
+  </div>
+  <div class="toolbar">
+    <label class="search"
+      >Search runs<input
+        type="search"
+        [(ngModel)]="search"
+        (ngModelChange)="searchChanged()"
+        maxlength="256"
+        placeholder="Search run IDs or tag values" /></label
+    ><label
+      >Workflow<select [(ngModel)]="workflow" (ngModelChange)="page = 0">
+        <option value="">All workflows</option>
+        <option *ngFor="let id of workflows" [value]="id">{{ id }}</option>
+      </select></label
+    ><label
+      >Status<select [(ngModel)]="status" (ngModelChange)="page = 0">
+        <option value="">All statuses</option>
+        <option *ngFor="let value of statuses" [value]="value">
+          {{ value.replaceAll('_', ' ') }}
+        </option>
+      </select></label
+    ><label
+      >Run type<select [(ngModel)]="classification" (ngModelChange)="page = 0">
+        <option value="">All runs</option>
+        <option value="test">Test runs</option>
+        <option value="other">Other runs</option>
+      </select></label
+    >
+  </div>
+  <div class="toolbar tag-filters">
+    <label
+      >Tag<select [(ngModel)]="tagKey" (ngModelChange)="searchChanged()">
+        <option value="">No exact tag filter</option>
+        <option *ngFor="let field of tagFields" [value]="field.key">{{ field.label }}</option>
+      </select></label
+    >
+    <label
+      >Exact tag value<input
+        [(ngModel)]="tagValue"
+        (ngModelChange)="searchChanged()"
+        maxlength="256"
+        placeholder="Enter a value or click a run tag"
+    /></label>
+  </div>
+  <div class="toolbar">
+    <label>From (UTC)<input type="date" [(ngModel)]="from" (ngModelChange)="page = 0" /></label
+    ><label>Through (UTC)<input type="date" [(ngModel)]="to" (ngModelChange)="page = 0" /></label
+    ><button (click)="resetFilters()">Clear filters</button
+    ><button [disabled]="busy" (click)="load()">{{ busy ? 'Refreshing…' : 'Refresh runs' }}</button
+    ><button (click)="bridge.host?.openManagement('analytics')">View cost analytics</button>
+  </div>
+  <p class="notice">
+    Search and exact tag filters query all stored runs in this team. Loaded {{ runs.length }}
+    matches, newest first. Workflow, status, run type, dates, totals and sorting apply to loaded
+    matches; load older matches to expand them. Open runs include paused and waiting workflows.
+  </p>
+  <section class="panel" [attr.aria-busy]="busy">
+    <div class="panel-heading">
+      <h2>Workflow runs</h2>
+      <span class="muted"
+        >{{ filtered.length }} matching runs ·
+        {{ refreshed ? 'Refreshed ' + (refreshed | date: 'shortTime') : 'Loading…' }}</span
+      >
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th [attr.aria-sort]="ariaSort('workflow')">
+              <button (click)="setSort('workflow')">Workflow {{ sortLabel('workflow') }}</button>
+            </th>
+            <th [attr.aria-sort]="ariaSort('status')">
+              <button (click)="setSort('status')">Status {{ sortLabel('status') }}</button>
+            </th>
+            <th>Run tags</th>
+            <th [attr.aria-sort]="ariaSort('started')">
+              <button (click)="setSort('started')">Started {{ sortLabel('started') }}</button>
+            </th>
+            <th [attr.aria-sort]="ariaSort('duration')">
+              <button (click)="setSort('duration')">Duration {{ sortLabel('duration') }}</button>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let run of rows" [class.selected]="selectedId === run.workflow_id">
+            <td>
+              <button class="link" aria-haspopup="dialog" (click)="open(run.workflow_id)">
+                {{ run.definition_id }}</button
+              ><small class="run-id">{{ run.workflow_id }}</small>
+            </td>
+            <td>
+              <span class="badge" [ngClass]="tone(run)">{{
+                statusOf(run).replaceAll('_', ' ')
+              }}</span
+              ><small *ngIf="testRun(run)">Test execution</small>
+            </td>
+            <td>
+              <div class="run-tags" *ngIf="tagsOf(run).length; else legacyTags">
+                <button
+                  *ngFor="let tag of tagsOf(run).slice(0, 4)"
+                  class="run-tag"
+                  [title]="'Filter by ' + tag.label + ': ' + tag.value"
+                  (click)="filterTag(tag.key, tag.value)"
+                >
+                  <span>{{ tag.label }}</span
+                  ><strong>{{ tag.value }}</strong>
+                </button>
+              </div>
+              <ng-template #legacyTags
+                ><span class="muted">Tags not recorded</span
+                ><small
+                  >{{
+                    run.definition_version === 0 ? 'Draft snapshot' : 'v' + run.definition_version
+                  }}
+                  · {{ run.trigger_type.replaceAll('_', ' ') }}</small
+                ></ng-template
+              >
+            </td>
+            <td>{{ run.created_at | date: 'medium' }}</td>
+            <td>{{ durationLabel(run) }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="empty" *ngIf="!busy && !filtered.length">
+      {{
+        runs.length || search || tagKey || workflow || status || classification || from || to
+          ? 'No runs match these filters.'
+          : 'No workflow runs yet. Test a workflow from the builder to get started.'
+      }}
+    </p>
+    <div class="pagination">
+      <span>Page {{ page + 1 }} of {{ pages }}</span
+      ><button [disabled]="page === 0" (click)="page = page - 1">Previous runs</button
+      ><button [disabled]="page + 1 >= pages" (click)="page = page + 1">Next runs</button>
+      <button *ngIf="hasMore" [disabled]="busy" (click)="load(true)">
+        {{ busy ? 'Loading…' : 'Load older matches' }}
+      </button>
+    </div>
+  </section>
+  <dialog
+    #detailsDialog
+    class="run-dialog"
+    aria-labelledby="run-details-title"
+    closedby="any"
+    (cancel)="$event.preventDefault(); close()"
+    [attr.aria-busy]="detailBusy"
+  >
+    <div class="panel-heading">
+      <div>
+        <h2 id="run-details-title">Run details</h2>
+        <p class="muted run-id">{{ selectedId }}</p>
+      </div>
+      <button autofocus (click)="close()">Close details</button>
+    </div>
+    <div class="dialog-content" *ngIf="selectedId">
+      <p class="empty" *ngIf="detailBusy && !detail">Loading run details…</p>
+      <p class="empty error" role="alert" *ngIf="detailError">
+        {{ detailError }} <button (click)="open(selectedId)">Retry details</button>
+      </p>
+      <runloom-execution-timeline *ngIf="detail as history" [history]="history" />
+      <div class="detail-grid" *ngIf="detail as history">
+        <div class="stack">
+          <div class="actions">
+            <span class="badge" [ngClass]="tone(history.run)">{{
+              statusOf(history.run).replaceAll('_', ' ')
+            }}</span
+            ><span class="muted"
+              >{{ history.run.definition_id }} ·
+              {{
+                history.run.definition_version
+                  ? 'v' + history.run.definition_version
+                  : 'Draft snapshot'
+              }}</span
+            >
+          </div>
+          <p class="muted">
+            Recorded {{ history.run.updated_at | date: 'medium' }} · Duration
+            {{ durationLabel(history.run) }}
+          </p>
+          <div class="run-tags" aria-label="Run tags">
+            <button
+              *ngFor="let tag of tagsOf(history.run)"
+              class="run-tag"
+              [title]="'Filter by ' + tag.label + ': ' + tag.value"
+              (click)="close(); filterTag(tag.key, tag.value)"
+            >
+              <span>{{ tag.label }}</span
+              ><strong>{{ tag.value }}</strong>
+            </button>
+            <span class="muted" *ngIf="!tagsOf(history.run).length"
+              >Tags were not recorded for this run.</span
+            >
+          </div>
+          <p class="notice" *ngIf="testRun(history.run)">
+            Test run — activities may have performed real external actions.
+          </p>
+          <div class="notice error" *ngIf="history.run.state?.error">
+            <strong>Run error</strong>
+            <pre>{{ history.run.state?.error | json }}</pre>
+          </div>
+          <details open>
+            <summary>Inputs</summary>
+            <pre>{{ history.run.input | json }}</pre>
+          </details>
+          <details open>
+            <summary>Output</summary>
+            <pre>{{
+              history.run.output === undefined
+                ? 'No output recorded yet.'
+                : (history.run.output | json)
+            }}</pre>
+          </details>
+          <details>
+            <summary>Execution state & pause reasons</summary>
+            <pre>{{ history.run.state | json }}</pre>
+          </details>
+        </div>
+        <aside class="stack">
+          <h3>Audit trail</h3>
+          <p class="muted">
+            Latest {{ history.events.length }} recorded events (maximum 1,000). Times display in
+            your local timezone.
+          </p>
+          <p class="muted" *ngIf="!history.events.length">No audit events recorded.</p>
+          <article class="revision" *ngFor="let event of history.events">
+            <strong>{{ event.event_type }}</strong
+            ><small>{{ event.created_at | date: 'medium' }} · {{ event.actor }}</small
+            ><small *ngIf="event.step_id">Node {{ event.step_id }}</small>
+            <details>
+              <summary>Event data</summary>
+              <pre>{{ event.payload | json }}</pre>
+            </details>
+          </article>
+        </aside>
+      </div>
+    </div>
+  </dialog>
+</ng-container>

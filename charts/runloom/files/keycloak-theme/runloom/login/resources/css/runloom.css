@@ -1,0 +1,58 @@
+/* Presentation only: Keycloak owns form actions, validation and authentication. */
+:root { color-scheme: light; --rl-purple: #6555da; --rl-ink: #262431; }
+html.login-pf, .login-pf body { background: #f8f7f4; color: var(--rl-ink); }
+.login-pf body { margin: 0; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 15px; line-height: 1.6; }
+* { box-sizing: border-box; }
+.login-pf-page { min-height: 100vh; max-width: 1200px; margin: auto; padding: 64px 40px; display: grid; grid-template-columns: 1fr 460px; align-items: center; gap: 80px; }
+#kc-header { margin: 0; color: var(--rl-ink); }
+#kc-header-wrapper { padding: 0; text-align: left; white-space: normal; text-transform: none; letter-spacing: normal; }
+.runloom-wordmark { display: block; font-size: 27px; font-weight: 750; letter-spacing: -1px; }
+.runloom-wordmark::before { content: "R"; display: inline-grid; place-items: center; width: 42px; height: 42px; margin-right: 12px; border-radius: 13px; background: var(--rl-purple); color: white; font-size: 24px; }
+.runloom-headline { display: block; margin-top: 70px; font-size: clamp(36px, 4.2vw, 58px); line-height: 1.12; letter-spacing: -2px; font-weight: 720; }
+.runloom-description { display: block; max-width: 360px; margin-top: 24px; font-size: 17px; line-height: 1.7; color: #625e70; }
+.login-pf-page .card-pf { width: 100%; max-width: none; margin: 0; padding: 40px; background: #fff; border: 1px solid #e7e3ee; border-radius: 22px; box-shadow: 0 16px 60px #30244b0a; }
+.login-pf-page .login-pf-header { margin: 0 0 28px; }
+#kc-page-title { margin: 0; font-size: 27px; font-weight: 680; line-height: 1.3; letter-spacing: -.6px; text-align: left; }
+#kc-content, #kc-content-wrapper { margin: 0; }
+.login-pf-page .form-group { margin-bottom: 21px; }
+.login-pf-page label { color: #423c50; font-size: 14px; font-weight: 550; }
+.login-pf-page .pf-c-form-control { height: 48px; border: 1px solid #d9d5e1; border-radius: 9px; padding: 10px 13px; background: #fff; color: var(--rl-ink); font-size: 16px; box-shadow: none; }
+.login-pf-page textarea.pf-c-form-control { height: auto; min-height: 90px; }
+.login-pf-page .pf-c-form-control:focus { border-color: var(--rl-purple); outline: 3px solid #6555da26; outline-offset: 1px; }
+.login-pf-page .pf-c-input-group { border-radius: 9px; }
+.login-pf-page .pf-c-input-group .pf-c-form-control { border-radius: 9px 0 0 9px; }
+.login-pf-page .pf-c-input-group .pf-c-button { border: 1px solid #d9d5e1; border-left: none; border-radius: 0 9px 9px 0; background: #f8f7fa; color: #625e70; }
+.login-pf-page input[type=checkbox] { accent-color: var(--rl-purple); }
+.login-pf-page .pf-c-button.pf-m-primary, #kc-login { min-height: 48px; border: none; border-radius: 9px; background: var(--rl-purple); color: #fff; font: inherit; font-weight: 650; box-shadow: none; }
+.login-pf-page .pf-c-button.pf-m-primary:hover, #kc-login:hover { background: #5443c5; }
+.login-pf-page a { color: #5543be; text-decoration: none; }
+.login-pf-page a:hover { text-decoration: underline; }
+.login-pf-page :is(a,button,input):focus-visible { outline: 3px solid #6555da80; outline-offset: 3px; }
+#kc-form-options .checkbox { margin: 0; }
+#kc-form-options label { font-size: 13px; }
+#kc-form-buttons { margin-top: 25px; }
+#kc-info { margin: 26px 0 0; }
+#kc-info-wrapper { padding: 21px 0 0; border-top: 1px solid #eeeaf2; background: transparent; font-size: 14px; }
+#kc-registration { color: #625e70; }
+.login-pf-page .kc-social-section { margin-top: 24px; }
+.login-pf-page .kc-social-section h2 { color: #625e70; font-size: 13px; font-weight: 450; }
+.login-pf-page .kc-social-links { padding: 0; }
+.login-pf-page .kc-social-item { min-height: 48px; border: 1px solid #d9d5e1; border-radius: 9px; color: var(--rl-ink); background: #fff; }
+.login-pf-page .kc-social-item:hover { background: #f6f3fc; }
+.login-pf-page .pf-c-alert { margin-bottom: 22px; border-radius: 9px; font-size: 14px; overflow-wrap: anywhere; }
+.login-pf-page .pf-m-error, .login-pf-page .kc-feedback-text { font-size: 14px; }
+.login-pf-page .subtitle { color: #625e70; font-size: 12px; }
+.runloom-auth-footer { margin-top: 30px; padding-top: 18px; text-align: center; color: #706979; font-size: 12px; }
+#kc-locale { position: relative; top: auto; right: auto; margin-bottom: 16px; }
+@media (max-width: 900px) {
+  .login-pf-page { grid-template-columns: 1fr 420px; gap: 35px; padding: 40px 28px; }
+  .runloom-headline { font-size: 38px; }
+}
+@media (max-width: 720px) {
+  .login-pf-page { display: flex; flex-direction: column; align-items: stretch; gap: 28px; max-width: 510px; padding: 30px 18px; }
+  #kc-header-wrapper { text-align: center; }
+  .runloom-wordmark { font-size: 24px; }
+  .runloom-headline, .runloom-description { display: none; }
+  .login-pf-page .card-pf { padding: 28px 24px; border-radius: 17px; }
+  #kc-page-title { font-size: 25px; }
+}

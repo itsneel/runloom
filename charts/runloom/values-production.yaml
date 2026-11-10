@@ -1,0 +1,122 @@
+# Example for a hosted deployment using separately managed services.
+# Replace registry, tag, Temporal endpoint, Secret name, host and TLS settings.
+development:
+  enabled: false
+# Requires a working metrics.k8s.io API (normally Metrics Server).
+autoscaling:
+  workloads:
+    api: {enabled: true}
+    auth: {enabled: true}
+    workflows: {enabled: true}
+    management: {enabled: true}
+    worker: {enabled: true, maxReplicas: 8}
+    ui: {enabled: true, maxReplicas: 4}
+    workflows-ui: {enabled: true, maxReplicas: 4}
+    management-ui: {enabled: true, maxReplicas: 4}
+    platform-ui: {enabled: true, maxReplicas: 4}
+podDisruptionBudgets:
+  workloads:
+    api: {enabled: true}
+    auth: {enabled: true}
+    workflows: {enabled: true}
+    management: {enabled: true}
+    worker: {enabled: true}
+    ui: {enabled: true}
+    workflows-ui: {enabled: true}
+    management-ui: {enabled: true}
+    platform-ui: {enabled: true}
+topologySpreadConstraints:
+  - {maxSkew: 1, topologyKey: kubernetes.io/hostname, whenUnsatisfiable: ScheduleAnyway}
+email:
+  enabled: false
+images:
+  # Image metadata only; does not enable local/default account provisioning.
+  localAdmin:
+    repository: registry.example.com/team/runloom-local-admin
+    tag: "0.1.0"
+  assistant:
+    repository: registry.example.com/team/runloom-assistant
+    tag: "0.1.0"
+  database-setup:
+    repository: registry.example.com/team/runloom-database-setup
+    tag: "0.1.0"
+  auth:
+    repository: registry.example.com/team/runloom-auth
+    tag: "0.1.0"
+  management:
+    repository: registry.example.com/team/runloom-management
+    tag: "0.1.0"
+  gateway:
+    repository: registry.example.com/team/runloom-gateway
+    tag: "0.1.0"
+  workflows:
+    repository: registry.example.com/team/runloom-workflows
+    tag: "0.1.0"
+  worker:
+    repository: registry.example.com/team/runloom-worker
+    tag: "0.1.0"
+  ui:
+    repository: registry.example.com/team/runloom-ui
+    tag: "0.1.0"
+  workflows-ui:
+    repository: registry.example.com/team/runloom-workflows-ui
+    tag: "0.1.0"
+  management-ui:
+    repository: registry.example.com/team/runloom-management-ui
+    tag: "0.1.0"
+  platform-ui:
+    repository: registry.example.com/team/runloom-platform-ui
+    tag: "0.1.0"
+temporal:
+  address: temporal-frontend.temporal.svc.cluster.local:7233
+  namespace: default
+  tls:
+    enabled: true
+    existingSecret: runloom-temporal-tls
+    caKey: ca.crt
+database:
+  driver: postgres
+splitServices:
+  trustConfigMap: runloom-service-trust
+  databases:
+    auth: {name: runloom_auth, existingSecret: runloom-auth-database, secretKey: url}
+    workflows: {name: runloom_workflows, existingSecret: runloom-workflows-database, secretKey: url}
+    management: {name: runloom_management, existingSecret: runloom-management-database, secretKey: url}
+  credentials:
+    auth: runloom-auth-token
+    workflows: runloom-workflows-token
+    management: runloom-management-token
+    worker: runloom-worker-token
+# Required: provision a persistent 32-byte key in the release namespace.
+# This also protects execution payloads. Never store key bytes in values files.
+workflowSecrets:
+  existingSecret: runloom-vault-key
+  secretKey: encryption-key
+auth:
+  publicURL: https://runloom.example.com
+  url: https://accounts.example.com/auth
+  issuer: https://accounts.example.com/auth/realms/runloom
+  jwksURL: https://accounts.example.com/auth/realms/runloom/protocol/openid-connect/certs
+# Required for native organization membership and consumer client provisioning.
+# Enable Keycloak Organizations and grant the roles in docs/authentication.md.
+consumer:
+  provisioning:
+    enabled: true
+    adminURL: https://accounts.example.com/auth
+    clientID: runloom-provisioner
+    existingSecret: runloom-provisioner
+    secretKey: client-secret
+ingress:
+  enabled: true
+  className: nginx
+  host: runloom.example.com
+  tls:
+    - secretName: runloom-tls
+      hosts: [runloom.example.com]
+docs:
+  publicURL: https://docs.example.com
+  image:
+    repository: ghcr.io/your-org/runloom-docs
+    tag: "replace-with-your-release"
+  ingress:
+    enabled: false

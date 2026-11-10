@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.0",
+  "kind": "child",
+  "id": "parallel-greeting",
+  "version": 0,
+  "name": "Demo · Reusable greeting",
+  "description": "Wait five seconds, then return a greeting. Uses no external services.",
+  "trigger": {
+    "type": "manual"
+  },
+  "input_schema": {
+    "type": "object",
+    "required": [
+      "name"
+    ],
+    "properties": {
+      "name": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  },
+  "steps": [
+    {
+      "id": "wait-five-seconds",
+      "name": "Wait five seconds",
+      "type": "wait",
+      "seconds": 5
+    },
+    {
+      "id": "greeting",
+      "name": "Return greeting",
+      "type": "activity",
+      "activity": "runloom.echo",
+      "with": {
+        "message": "Hello, ${input.name}!"
+      }
+    }
+  ],
+  "output": "${steps.greeting.output}"
+}

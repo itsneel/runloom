@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.angular/
+test-results/
+playwright-report/
+package-lock.json
+content/imported/
+content/contracts/
+content/sources/
+src/app/core/content/generated/
+public/generated/

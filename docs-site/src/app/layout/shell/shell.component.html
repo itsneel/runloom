@@ -1,0 +1,125 @@
+<a class="skip-link" href="#main-content">Skip to content</a>
+<header class="header">
+  <button
+    class="icon-button menu-button"
+    aria-label="Toggle documentation navigation"
+    [attr.aria-expanded]="mobileMenu()"
+    aria-controls="sidebar"
+    (click)="mobileMenu.set(!mobileMenu())"
+  >
+    <docs-icon [name]="mobileMenu() ? 'close' : 'menu'" />
+  </button>
+  <a class="brand" routerLink="/" aria-label="Runloom documentation home"
+    ><img src="/favicon.svg" alt="" width="27" height="27" /><strong>runloom</strong
+    ><span class="brand-divider">/</span><span class="brand-docs">docs</span></a
+  >
+  <button
+    class="search-trigger"
+    #searchTrigger
+    (click)="search.open()"
+    aria-label="Search documentation"
+    aria-keyshortcuts="Meta+K Control+K"
+  >
+    <docs-icon name="search" /><span>Search documentation…</span><kbd>⌘ K</kbd>
+  </button>
+  <nav class="header-actions" aria-label="Quick links">
+    <a class="api-link" routerLink="/api/overview">API reference</a
+    ><button
+      class="icon-button"
+      [attr.aria-label]="settings.dark() ? 'Switch to light theme' : 'Switch to dark theme'"
+      (click)="settings.toggleTheme()"
+    >
+      <docs-icon [name]="settings.dark() ? 'sun' : 'moon'" /></button
+    ><button
+      class="icon-button connection-button"
+      aria-label="Studio connection"
+      title="Choose your Studio installation"
+      (click)="configureStudio()"
+    >
+      <docs-icon name="sliders" /></button
+    ><a
+      class="primary studio-link"
+      [href]="settings.studioUrl()"
+      target="_blank"
+      rel="noopener noreferrer"
+      >Open Studio<docs-icon name="external"
+    /></a>
+  </nav>
+</header>
+@if (mobileMenu()) {
+  <button class="nav-scrim" aria-label="Close navigation" (click)="mobileMenu.set(false)"></button>
+}
+<aside id="sidebar" class="sidebar" [class.mobile-open]="mobileMenu()">
+  <nav aria-label="Documentation">
+    <a
+      class="home-link"
+      routerLink="/"
+      routerLinkActive="active"
+      [routerLinkActiveOptions]="{ exact: true }"
+      ariaCurrentWhenActive="page"
+      ><docs-icon name="book" />Documentation</a
+    >
+    @for (group of groups; track group.name) {
+      <section class="nav-group">
+        <h2>{{ group.name }}</h2>
+        @for (page of group.pages; track page.slug) {
+          <a
+            [routerLink]="'/' + page.slug"
+            routerLinkActive="active"
+            ariaCurrentWhenActive="page"
+            >{{ page.title }}</a
+          >
+        }
+      </section>
+    }
+  </nav>
+  <div class="sidebar-foot"><span class="status-dot"></span> Open source. Built for your team.</div>
+</aside>
+<main #main id="main-content" tabindex="-1"><router-outlet /></main>
+<docs-search #search (dismissed)="searchTrigger.focus()" />
+<dialog #connection class="connection-dialog" aria-labelledby="connection-title">
+  <div class="dialog-heading">
+    <h2 id="connection-title">Your Studio installation</h2>
+    <button class="icon-button" aria-label="Close Studio connection" (click)="connection.close()">
+      <docs-icon name="close" />
+    </button>
+  </div>
+  <p>
+    Choose where Open Studio and authenticated API testing should take you. No credentials are
+    stored here.
+    <a [href]="settings.studioUrl()" target="_blank" rel="noopener noreferrer"
+      >Open the selected Studio ↗</a
+    >
+  </p>
+  <div class="connection-presets">
+    <button class="secondary" (click)="destination.set('http://localhost:4200')">Kind</button
+    ><button class="secondary" (click)="destination.set('http://localhost:34200')">
+      Compose · MongoDB</button
+    ><button class="secondary" (click)="destination.set('http://localhost:35200')">
+      Compose · PostgreSQL
+    </button>
+  </div>
+  <form (submit)="$event.preventDefault(); saveDestination()">
+    <label for="studio-url">Studio origin</label
+    ><input
+      #url
+      id="studio-url"
+      type="url"
+      [value]="destination()"
+      (input)="destination.set(url.value)"
+      placeholder="https://studio.example.com"
+      [attr.aria-invalid]="connectionError()"
+      aria-describedby="connection-help"
+    />
+    <p id="connection-help">
+      Use HTTPS, or HTTP on localhost. Do not include a path, password or token.
+    </p>
+    @if (connectionError()) {
+      <p class="error" role="alert">
+        Enter a valid HTTPS origin or localhost HTTP origin without credentials, paths or query
+        parameters.
+      </p>
+    }
+    <button class="primary" type="submit">Save connection<docs-icon name="check" /></button>
+  </form>
+</dialog>

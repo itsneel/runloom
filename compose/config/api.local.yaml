@@ -1,0 +1,9 @@
+{
+  "RUNLOOM_API_ADDRESS": "0.0.0.0:8080",
+  "RUNLOOM_OIDC_URL": "/auth",
+  "RUNLOOM_OIDC_REALM": "runloom",
+  "RUNLOOM_OIDC_CLIENT_ID": "runloom",
+  "RUNLOOM_OIDC_ISSUER": "http://localhost:14200/auth/realms/runloom",
+  "RUNLOOM_OIDC_JWKS_URL": "http://keycloak:8080/auth/realms/runloom/protocol/openid-connect/certs",
+  "RUNLOOM_GOOGLE_LOGIN_ENABLED": "false"
+}

@@ -1,0 +1,14 @@
+{
+  "rates": [
+    {
+      "provider": "local-test",
+      "model": "test-model",
+      "version": "synthetic-test-v1",
+      "effective_at": "2020-01-01T00:00:00Z",
+      "currency": "USD",
+      "input_per_million": "1.00",
+      "output_per_million": "2.00",
+      "cached_input_per_million": "0.50"
+    }
+  ]
+}

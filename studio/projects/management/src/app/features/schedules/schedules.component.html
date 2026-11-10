@@ -1,0 +1,237 @@
+<runloom-notice *ngIf="error" [message]="error" tone="error" (dismissed)="error = ''" />
+<runloom-notice *ngIf="notice" [message]="notice" tone="success" (dismissed)="notice = ''" />
+<p class="empty" *ngIf="!teamId">Choose a team to manage its schedules.</p>
+<ng-container *ngIf="teamId">
+  <div class="metrics" aria-label="Team schedule summary">
+    <div class="metric">
+      <small>Total schedules</small><strong>{{ entries.length }}</strong>
+    </div>
+    <div class="metric">
+      <small>Active</small><strong>{{ activeCount }}</strong>
+    </div>
+    <div class="metric">
+      <small>Paused</small><strong>{{ entries.length - activeCount }}</strong>
+    </div>
+  </div>
+  <div class="toolbar">
+    <label class="search"
+      >Search schedules<input
+        type="search"
+        [(ngModel)]="search"
+        (ngModelChange)="page = 0"
+        placeholder="Name or workflow ID"
+    /></label>
+    <label
+      >Status<select [(ngModel)]="status" (ngModelChange)="page = 0">
+        <option value="">All statuses</option>
+        <option value="active">Active</option>
+        <option value="paused">Paused</option>
+      </select></label
+    >
+    <button [disabled]="busy || loading" (click)="load()">
+      {{ loading ? 'Refreshing…' : 'Refresh schedules' }}
+    </button>
+    <button class="primary" [disabled]="busy || loading || !auth.canEdit()" (click)="create()">
+      New schedule
+    </button>
+  </div>
+  <p class="notice">
+    Schedules use pinned published main workflows, independent of project folders. Publishing a
+    newer version does not update a schedule. Delete and recreate it to change timing, input or
+    version.
+  </p>
+  <section class="panel" [attr.aria-busy]="loading">
+    <div class="panel-heading">
+      <h2>Team schedules</h2>
+      <button (click)="ascending = !ascending; page = 0">Name {{ ascending ? '↑' : '↓' }}</button>
+    </div>
+    <p class="empty" *ngIf="!rows.length">
+      {{
+        loading
+          ? 'Loading schedules…'
+          : entries.length
+            ? 'No schedules match your filters.'
+            : 'No schedules yet. Publish a main workflow, then create one here.'
+      }}
+    </p>
+    <article class="schedule-card" *ngFor="let item of rows">
+      <div class="panel-heading">
+        <h3>{{ item.name }}</h3>
+        <span class="badge" [class.warning]="item.paused" [class.success]="!item.paused">{{
+          item.paused ? 'Paused' : 'Active'
+        }}</span>
+      </div>
+      <p>{{ item.definition_id }} · v{{ item.version }}</p>
+      <p>
+        {{
+          item.cron ||
+            (item.at ? (item.at | date: 'medium') : 'Every ' + item.interval_seconds + ' seconds')
+        }}<ng-container *ngIf="item.cron"> · {{ item.time_zone || 'UTC' }}</ng-container>
+      </p>
+      <small *ngIf="item.next_runs?.length"
+        >Next: {{ item.next_runs[0] | date: 'medium' }} (your local time)</small
+      >
+      <div class="actions">
+        <button
+          [disabled]="busy || loading || !auth.canEdit()"
+          (click)="change(item, item.paused ? 'resume' : 'pause')"
+        >
+          {{ item.paused ? 'Resume' : 'Pause' }}
+        </button>
+        <button [disabled]="busy || loading || !auth.canEdit()" (click)="change(item, 'trigger')">
+          Run now
+        </button>
+        <button
+          class="danger"
+          [disabled]="busy || loading || !auth.canEdit()"
+          (click)="change(item, 'delete')"
+        >
+          Delete
+        </button>
+      </div>
+      <div class="recent-runs" *ngIf="item.recent_runs?.length">
+        <small>Recent runs</small
+        ><button
+          *ngFor="let id of item.recent_runs.slice(-3)"
+          (click)="viewRun.emit(id)"
+          [disabled]="busy"
+          [attr.aria-label]="'View run ' + id"
+        >
+          {{ id }} ↗
+        </button>
+      </div>
+    </article>
+    <div class="pagination" *ngIf="pages > 1">
+      <button [disabled]="page === 0" (click)="page = page - 1">Previous</button
+      ><span>Page {{ page + 1 }} of {{ pages }}</span
+      ><button [disabled]="page + 1 >= pages" (click)="page = page + 1">Next</button>
+    </div>
+  </section>
+  <section
+    class="panel editor"
+    *ngIf="draft as form"
+    #editorPanel
+    tabindex="-1"
+    aria-label="New schedule editor"
+  >
+    <div class="panel-heading">
+      <h2>Create a schedule</h2>
+      <button [disabled]="busy" (click)="close()">Close editor</button>
+    </div>
+    <p *ngIf="!definitions.length">
+      No published main workflows are available. Publish a workflow in Studio first. Child workflows
+      cannot be scheduled.
+    </p>
+    <form (ngSubmit)="save()">
+      <fieldset [disabled]="busy || !auth.canEdit()">
+        <label
+          >Name<input
+            name="name"
+            aria-label="Schedule name"
+            required
+            maxlength="120"
+            [(ngModel)]="form.name"
+        /></label>
+        <label
+          >Published main workflow<select
+            name="definition"
+            aria-label="Scheduled workflow"
+            required
+            [ngModel]="form.definitionId"
+            (ngModelChange)="selectDefinition($event)"
+          >
+            <option value="">Choose a main workflow</option>
+            <option *ngFor="let item of definitions" [value]="item.id">{{ item.name }}</option>
+          </select></label
+        >
+        <label
+          >Pinned version<input
+            name="version"
+            aria-label="Schedule version"
+            type="number"
+            min="1"
+            step="1"
+            required
+            [(ngModel)]="form.version"
+        /></label>
+        <label
+          >When to run<select name="mode" aria-label="Schedule frequency" [(ngModel)]="form.mode">
+            <option value="interval">Every interval</option>
+            <option value="cron">Calendar (cron)</option>
+            <option value="once">Once at a date and time</option>
+          </select></label
+        >
+        <label *ngIf="form.mode === 'interval'"
+          >Every how many minutes?<input
+            name="minutes"
+            aria-label="Schedule minutes"
+            type="number"
+            min="1"
+            max="525600"
+            step="1"
+            required
+            [(ngModel)]="form.minutes"
+        /></label>
+        <ng-container *ngIf="form.mode === 'cron'">
+          <label
+            >Calendar presets<select
+              name="preset"
+              aria-label="Calendar preset"
+              [ngModel]="form.cron"
+              (ngModelChange)="form.cron = $event"
+            >
+              <option value="0 9 * * *">Every day at 9am</option>
+              <option value="0 9 * * 1-5">Weekdays at 9am</option>
+              <option value="0 9 * * 1">Every Monday at 9am</option>
+              <option value="0 9 1 * *">First day of each month at 9am</option>
+            </select></label
+          >
+          <label
+            >Cron: minute hour day month weekday<input
+              name="cron"
+              aria-label="Schedule cron"
+              required
+              [(ngModel)]="form.cron"
+          /></label>
+          <label
+            >IANA time zone<input
+              name="zone"
+              aria-label="Schedule time zone"
+              required
+              [(ngModel)]="form.timeZone"
+              placeholder="Asia/Kolkata"
+          /></label>
+        </ng-container>
+        <label *ngIf="form.mode === 'once'"
+          >Your local date and time<input
+            name="at"
+            aria-label="Schedule date"
+            type="datetime-local"
+            required
+            [(ngModel)]="form.at"
+        /></label>
+        <label class="wide"
+          >Saved run input<textarea
+            name="input"
+            aria-label="Schedule input"
+            rows="5"
+            [(ngModel)]="form.input"
+          ></textarea
+          ><small>JSON object. Do not include secrets.</small></label
+        >
+        <label class="checkbox wide"
+          ><input name="paused" type="checkbox" [(ngModel)]="form.paused" />Create paused</label
+        >
+      </fieldset>
+      <button class="primary" [disabled]="busy || loading || !auth.canEdit() || !form.definitionId">
+        {{ busy ? 'Creating…' : 'Create schedule' }}
+      </button>
+    </form>
+  </section>
+  <p class="notice">
+    Overlapping starts are skipped. Failed runs pause future starts. Missed starts may catch up
+    within 15 minutes. Pausing or deleting a schedule does not cancel running workflows. Run now can
+    execute real external actions, even when a schedule is paused. New schedules may take a moment
+    to appear after Refresh.
+  </p>
+</ng-container>

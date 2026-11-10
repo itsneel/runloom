@@ -1,0 +1,22 @@
+<p *ngIf="loading" role="status">Loading integrations…</p>
+<div *ngIf="error" role="alert">{{error}} <button type="button" (click)="load()">Retry</button></div>
+<fieldset [disabled]="!editable || loading">
+  <label>Operation<select aria-label="Integration operation" [ngModel]="config.operation" (ngModelChange)="select($event)">
+    <option value="">Choose an operation</option>
+    <option *ngIf="config.operation && !selected" [value]="config.operation">{{config.operation}} · unavailable</option>
+    <option *ngFor="let op of operations" [value]="op.id">{{op.provider}} · {{op.name}}</option>
+  </select></label>
+  <label>Team secret name<input aria-label="Integration secret" [(ngModel)]="config.secret" (ngModelChange)="changed.emit()" placeholder="provider-access-token" /></label>
+  <p>Store the provider access token in Management → Workflow secrets and enter its name here. Never paste tokens into node fields. OAuth sign-in and automatic token refresh are not included; expired tokens must be replaced in the vault.</p>
+  <ng-container *ngIf="selected as op">
+    <p>{{op.description}}</p>
+    <label *ngFor="let parameter of op.parameters">{{parameter.label}}
+      <textarea *ngIf="parameter.type === 'array'; else textParameter" [attr.aria-label]="parameter.label" rows="5" [ngModel]="display(config.parameters[parameter.name])" (ngModelChange)="set(parameter.name, parameter.type, $event)"></textarea>
+      <ng-template #textParameter><input [attr.aria-label]="parameter.label" [ngModel]="display(config.parameters[parameter.name])" (ngModelChange)="set(parameter.name, parameter.type, $event)" /></ng-template>
+    </label>
+    <p *ngIf="op.mutates" class="warning">This operation changes an external system, including during workflow tests. It runs once without automatic retry. A timeout does not prove the action was not applied.</p>
+    <p *ngIf="!op.mutates">List operations return one page only. The provider's next-page token remains in the response; pages are not fetched automatically.</p>
+    <a [href]="op.documentation" target="_blank" rel="noopener noreferrer">Provider documentation</a>
+  </ng-container>
+  <p>Read <code>status_code</code> and <code>body</code> from the node output. Requests use fixed public HTTPS endpoints, a 60-second timeout and the existing team-secret and response-redaction controls.</p>
+</fieldset>

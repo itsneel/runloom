@@ -1,0 +1,10 @@
+# Opt-in provider-specific pricing catalogue; contains rates, never credentials.
+services:
+  worker:
+    configs:
+      - {source: runloom-pricing, target: /etc/runloom/config.d/30-pricing.yaml}
+    volumes:
+      - ${RUNLOOM_LLM_PRICING_PATH:?Set the absolute path to the pricing catalogue}:/run/config/llm-pricing.json:ro
+configs:
+  runloom-pricing:
+    file: ${RUNLOOM_PRICING_CONFIG_PATH:-./compose/config/pricing.yaml}

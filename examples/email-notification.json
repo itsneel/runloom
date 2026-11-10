@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0",
+  "id": "email-notification",
+  "name": "Send a notification email",
+  "trigger": {"type": "manual"},
+  "steps": [
+    {
+      "id": "notify",
+      "type": "email",
+      "name": "Notify the recipient",
+      "email": {
+        "to": ["${input.email}"],
+        "subject": "Your Runloom workflow completed",
+        "text": "Hello ${input.name}, your workflow has completed."
+      }
+    },
+    {"id": "finish", "type": "end", "with": {"delivery": "${steps.notify.output}"}}
+  ]
+}

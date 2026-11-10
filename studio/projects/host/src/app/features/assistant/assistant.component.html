@@ -1,0 +1,128 @@
+@if (auth.team()) {
+  <button #launcher class="assistant-launcher" [class.is-expanded]="open()" type="button" aria-label="Lumi" aria-haspopup="dialog" aria-controls="assistant-panel" [attr.aria-expanded]="open()" [title]="'Open Lumi · ' + shortcut" (click)="toggle()">
+    <runloom-icon name="workflow" /><span>Lumi</span><kbd aria-hidden="true">{{ shortcut }}</kbd>
+  </button>
+}
+@if (open() && auth.team()) {
+  <dialog #panel id="assistant-panel" class="assistant-panel" [class.is-closing]="closing()" aria-labelledby="assistant-title" (animationend)="motionEnded($event)" (cancel)="dismiss($event)" (click)="backdrop($event)" (keydown)="modalKeys($event)">
+    <header>
+      <div class="assistant-brand"><span class="brand-icon"><runloom-icon name="workflow" /></span><div><strong id="assistant-title">Lumi</strong><small>{{ workflowId() === undefined ? auth.team()?.name + ' · General chat' : 'Workflow · ' + (workflowName() || workflowId()) }}</small></div></div>
+      <div class="header-actions"><span class="private-label">Private chat</span><button class="close" type="button" aria-label="Close Lumi" (click)="close()"><span aria-hidden="true">Esc</span><span aria-hidden="true">×</span></button></div>
+    </header>
+    <div class="history">
+      <select aria-label="Conversation history" [ngModel]="chat.current()?.id || ''" (ngModelChange)="$event ? chat.select($event) : chat.newChat()" [disabled]="chat.sending">
+        <option value="">New conversation</option>
+        @for (conversation of chat.conversations(); track conversation.id) { <option [value]="conversation.id">{{ conversation.title }}</option> }
+      </select>
+      <button type="button" (click)="chat.newChat()" [disabled]="chat.busy() || !chat.ready()">{{ chat.outbox().length ? 'Move unsent to new chat' : 'New chat' }}</button>
+      @if (chat.nextCursor) { <button type="button" (click)="chat.more()">More</button> }
+    </div>
+    <details class="guardrails"><summary>Scope &amp; guardrails</summary>
+    <p class="boundary">{{ workflowId() === undefined ? 'Ask Lumi to build and save a workflow draft, or open a saved workflow to fix or enhance it.' : 'Requested changes are saved directly to the workflow draft. Publishing and running are separate actions.' }} Don’t share credentials.</p>
+    @if (workflowId() !== undefined) {
+      <p class="boundary" data-testid="workflow-chat-scope">Scoped to {{ workflowName() || workflowId() }} and its referenced children. Saved definitions, prompts, code and input mappings are sent to the configured model. To edit a referenced child, open that child.</p>
+    }
+    </details>
+    @if (chat.error()) { <div class="notice" role="alert">{{ chat.error() }} <button type="button" (click)="chat.reconnect()">Reconnect</button></div> }
+    @if (chat.storageWarning()) { <div class="notice" role="alert">{{ chat.storageWarning() }}</div> }
+    <div #messages class="messages" aria-label="Messages">
+      @if (!chat.current()?.messages?.length && !chat.outbox().length) {
+        <div class="empty"><span class="empty-eyebrow">A little clarity. A great workflow.</span><h2>What would you like to build?</h2><p>Start with an idea. Let’s work through the steps together.</p>
+          <div class="suggestions" aria-label="Suggested prompts">
+            <button type="button" (click)="suggest('Help me plan a workflow with clear inputs, steps and outputs.')">Plan a workflow <span aria-hidden="true">↗</span></button>
+            <button type="button" (click)="suggest('Help me design an approval process with reminders and escalation.')">Design an approval <span aria-hidden="true">↗</span></button>
+            <button type="button" (click)="suggest(workflowId() === undefined ? 'What should I consider for errors, retries and recovery in a workflow?' : 'Review this workflow, identify problems and propose improvements.')">{{ workflowId() === undefined ? 'Explore an idea' : 'Review this workflow' }} <span aria-hidden="true">↗</span></button>
+          </div>
+        </div>
+      }
+      @for (message of chat.messagesToDisplay(); track message.key) {
+        <article class="message" [class.from-user]="message.role === 'user'" [class.pending-message]="!!message.delivery" [class.is-entering]="message.role === 'user' && enteringMessages().has(message.request_id || '')" [attr.data-request-id]="message.request_id || null" (animationend)="finishMessageEntrance($event, message.request_id)" (animationcancel)="finishMessageEntrance($event, message.request_id)">
+          <div class="message-meta"><strong>{{ message.role === 'user' ? 'You' : 'Lumi' }}</strong><time>{{ message.created_at | date:'shortTime' }}</time></div>
+          @if (message.role === 'user') {
+            <small class="delivery-state" role="status">{{ message.delivery ? (chat.conversationLimit() ? 'Not sent · conversation limit reached' : message.delivery.state === 'failed' ? 'Delivery stopped' : message.delivery.state === 'sending' ? 'Sending…' : chat.deliveryBlocked() ? 'Blocked by an earlier delivery error' : 'Waiting to send…') : 'Saved · ' + chat.jobFor(message.job_id)?.status }}</small>
+          }
+          @if (message.content) { <p>{{ message.content }}</p> }
+          @if (message.role === 'assistant') {
+            @if (chat.jobFor(message.job_id); as job) {
+              @if (job.status === 'running' || job.status === 'queued') {
+                <div class="generation-progress" role="status" aria-live="polite" data-testid="lumi-progress">
+                  <span class="progress-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+                  <div><strong>{{ job.status === 'queued' ? 'Waiting in queue…' : job.authoring_context ? 'Building your response or workflow contract…' : 'Lumi is thinking…' }}</strong><small>{{ job.status === 'queued' ? 'Lumi will start when the previous response finishes.' : 'Waiting for the model to finish. You can stop this response below.' }}</small></div>
+                </div>
+              }
+              @if (job.error) { <p class="response-error" role="alert">{{ job.error }}</p> }
+              @if (!message.content && !job.error && job.status === 'cancelled') { <p>Response stopped.</p> }
+            }
+          }
+          @if (message.delivery; as item) {
+            @if (item.state === 'failed') {
+              <p class="delivery-error">{{ item.error }} Your message is kept in this tab; retry will not duplicate it.</p>
+              <div class="delivery-actions">
+                @if (!chat.conversationLimit()) { <button type="button" (click)="chat.retryDelivery()" [disabled]="chat.busy()">Retry delivery</button> }
+                <button type="button" (click)="chat.dismissLocal(item.id)" [disabled]="chat.busy()">Dismiss local copy</button>
+              </div>
+              <small>Dismiss removes only this browser copy, not a message already saved on the server.</small>
+            }
+          }
+          @if (message.role === 'assistant') {
+            @if (chat.jobFor(message.job_id); as job) {
+              @if (job.proposal && job.status === 'completed') {
+                <section class="proposal" aria-label="Workflow contract">
+                  <strong>{{ job.proposal.name }}</strong>
+                  @if (job.proposal.operation) {
+                    <p>{{ job.proposal.operation === 'create' ? 'New workflow in the default project' : 'Changes to the selected workflow draft' }}. Existing published versions and running executions stay unchanged.</p>
+                    @if (job.proposal.operation === 'update') { <details><summary>View workflow before changes</summary><pre>{{ savedDefinition(job) | json }}</pre></details> }
+                    <details open><summary>Workflow contract (JSON)</summary><pre>{{ job.proposal.definition | json }}</pre></details>
+                  } @else {
+                  <p>Create a new child draft with {{ job.proposal.steps.length }} top-level nodes and attach it {{ job.proposal.before_step_id ? 'before ' + job.proposal.before_step_id : 'before the first End node, or at the end' }}.</p>
+                  <details><summary>Child workflow nodes (JSON)</summary><pre>{{ job.proposal.steps | json }}</pre></details>
+                  <small>Draft only · Empty child input · Publish the child and pin its version manually before publishing the parent.</small>
+                  }
+                  @if (job.applied) {
+                    <p role="status">{{ job.proposal.operation ? 'Draft saved: ' + job.applied.parent_id : 'Child attached: ' + job.applied.child_id }}. Nothing was published or run.</p>
+                    @if (job.proposal.operation === 'create') { <p>Open the workflow list to find this new draft.</p> }
+                    @if (job.reverted) { <p role="status">Previous draft restored. This Lumi change was reverted.</p> }
+                    @else if (job.proposal.operation === 'update') {
+                      <button type="button" (click)="chat.revertProposal(job)" [disabled]="!canApply() || chat.applying() || !!chat.activeJob || chat.sending">{{ chat.applying() ? 'Updating draft…' : 'Revert Lumi change' }}</button>
+                      <small>Restores the draft before this edit as a new history entry. Newer saved edits block this action.</small>
+                    }
+                  } @else {
+                    @if (!canApply()) { <p>Save valid pending edits or resolve the editing session so Lumi can save its changes. Editor permission is required.</p> }
+                    <button type="button" (click)="chat.applyProposal(job)" [disabled]="!canApply() || chat.applying() || !!chat.activeJob || chat.sending">{{ chat.applying() ? 'Saving workflow…' : job.save_draft ? 'Retry saving draft' : 'Apply draft changes' }}</button>
+                  }
+                </section>
+              }
+            }
+          }
+        </article>
+      }
+      @if (chat.current()?.jobs?.length) {
+        <details class="jobs"><summary>Authoring jobs ({{ chat.current()!.jobs.length }})</summary>
+          @for (job of chat.current()!.jobs; track job.id) {
+            <div class="job"><strong>{{ job.model ? 'Planning' : 'Configuration notice' }} · {{ job.status }}</strong><small>{{ job.model || 'No model called' }}</small>@if (job.error) { <p>{{ job.error }}</p> }</div>
+          }
+        </details>
+      }
+    </div>
+    <footer>
+      @if (chat.conversationLimit() || chat.deliveryBlocked()) {
+        <section class="delivery-recovery" role="alert">
+          <strong>{{ chat.conversationLimit() || 'Message delivery stopped' }}</strong>
+          <p>{{ chat.outbox().length ? chat.outbox().length + ' unsent message(s) are safe in this tab. Move them and your draft to a new chat; saved history stays here.' : 'Start a new chat to continue. Your draft will be kept and saved history stays here.' }}</p>
+          @if (!chat.conversationLimit()) { <p>{{ chat.outbox()[0]?.error }}</p> }
+          <button type="button" (click)="chat.moveToNewChat()" [disabled]="chat.busy()">{{ chat.busy() ? 'Checking saved messages…' : chat.outbox().length ? 'Move unsent messages to new chat' : 'Continue in new chat' }}</button>
+        </section>
+      }
+      <div class="live-status" role="status">{{ chat.deliveryBlocked() ? 'Delivery paused · ' + chat.outbox().length + ' unsent' : chat.connection() === 'Reconnecting…' || chat.connection() === 'Disconnected' ? chat.connection() : chat.activeJob ? 'Response ' + chat.activeJob.status : chat.connection() || 'Messages are saved to your account' }}@if (chat.queuedCount) { · {{ chat.queuedCount }} queued }</div>
+      <form (ngSubmit)="chat.send()">
+        <textarea #composer aria-label="Message Lumi" name="message" [ngModel]="chat.draft" (ngModelChange)="chat.setDraft($event)" maxlength="8000" rows="2" placeholder="Describe what you have in mind…" (keydown)="keydown($event)" [disabled]="!chat.ready()"></textarea>
+        <div class="composer-actions"><small>Requested workflow changes save as drafts · Enter to send</small>
+          <button type="button" class="response-control" [class.is-idle]="!chat.activeJob" [disabled]="!chat.activeJob" (click)="chat.stop()">Stop response</button>
+          <button type="button" class="response-control" [class.is-idle]="!chat.activeJob && !chat.sending" (click)="chat.send('stop_and_send')" [disabled]="(!chat.activeJob && !chat.sending) || !chat.draft.trim() || !chat.ready() || !!chat.conversationLimit() || chat.outbox().length >= 10">Stop and send</button>
+          <button class="send" type="submit" [disabled]="!chat.draft.trim() || !chat.ready() || !!chat.conversationLimit() || chat.outbox().length >= 10">{{ chat.activeJob || chat.sending ? 'Queue message' : 'Send' }}</button>
+        </div>
+      </form>
+      <details class="draft-help"><summary>Drafts &amp; queued messages</summary><small class="draft-note">Queued messages run in order, even after closing chat. Stop and send takes priority; other queued messages are kept. Unsent text is kept only in this browser tab until saved.</small></details>
+    </footer>
+  </dialog>
+}

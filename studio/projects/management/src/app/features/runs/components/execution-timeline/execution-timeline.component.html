@@ -1,0 +1,105 @@
+<section class="execution" aria-label="Execution timeline">
+  <header>
+    <div>
+      <h3>Execution timeline</h3>
+      <p>
+        {{ timeline.rows.length }} {{ history.trace ? 'node executions' : 'stored nodes'
+        }}<ng-container *ngIf="timeline.timed"> · {{ timeline.span }} from first node</ng-container>
+      </p>
+    </div>
+  </header>
+  <p class="note" *ngIf="!history.trace">
+    Exact node timing is unavailable for this run. Showing the saved execution state.
+  </p>
+  <p class="note" *ngIf="history.trace?.omitted as count">
+    {{ count }} later node executions exceed the trace limit.
+  </p>
+  <p class="note" *ngIf="!timeline.rows.length">No node executions recorded.</p>
+  <div class="layout" *ngIf="node as detail">
+    <div class="chart">
+      <div class="scale" aria-hidden="true">
+        <span>Node</span
+        ><span *ngIf="timeline.timed"
+          >0 ms <i>{{ timeline.span }}</i></span
+        >
+      </div>
+      <div class="rows">
+        @for (row of timeline.rows; track row.sequence) {
+          <button
+            class="row"
+            [class.selected]="selected === row.sequence"
+            [attr.aria-pressed]="selected === row.sequence"
+            (click)="selected = row.sequence"
+          >
+            <span class="label"
+              ><strong>{{ row.name || row.step_id }}</strong
+              ><small
+                >{{ row.status
+                }}<ng-container *ngIf="row.started_at"> · +{{ row.offset }}</ng-container></small
+              ></span
+            >
+            <span class="track" *ngIf="row.started_at" aria-hidden="true"
+              ><span
+                class="bar"
+                [attr.data-status]="row.status"
+                [style.left.%]="row.left"
+                [style.width.%]="row.width"
+              ></span
+            ></span>
+          </button>
+        }
+      </div>
+    </div>
+    <aside aria-label="Selected node details">
+      <div class="heading">
+        <span>Node details</span><b [attr.data-status]="detail.status">{{ detail.status }}</b>
+      </div>
+      <h4>{{ detail.name || detail.step_id }}</h4>
+      <p class="identity">
+        {{ detail.type }}<ng-container *ngIf="detail.type"> · </ng-container>{{ detail.step_id }}
+      </p>
+      <dl>
+        <ng-container *ngIf="parent as group"
+          ><dt>Parent</dt>
+          <dd>{{ group.name || group.step_id }}</dd></ng-container
+        >
+        <ng-container *ngIf="detail.scope"
+          ><dt>Invocation</dt>
+          <dd>{{ detail.scope }}</dd></ng-container
+        >
+        <ng-container *ngIf="detail.started_at"
+          ><dt>Started</dt>
+          <dd>{{ detail.started_at | date: 'MMM d, HH:mm:ss.SSS' }}</dd></ng-container
+        >
+        <ng-container *ngIf="detail.finished_at"
+          ><dt>Finished</dt>
+          <dd>{{ detail.finished_at | date: 'MMM d, HH:mm:ss.SSS' }}</dd></ng-container
+        >
+        <ng-container *ngIf="detail.duration"
+          ><dt>Duration</dt>
+          <dd>{{ detail.duration }}</dd></ng-container
+        >
+      </dl>
+      <ng-container *ngIf="detail.error"
+        ><h5>Error</h5>
+        <pre class="error">{{ detail.error }}</pre>
+      </ng-container>
+      <h5>Input</h5>
+      <pre>{{
+        detail.input_omitted
+          ? 'Payload exceeds the preview limit.'
+          : detail.input === undefined
+            ? 'No input recorded.'
+            : (detail.input | json)
+      }}</pre>
+      <h5>Output</h5>
+      <pre>{{
+        detail.output_omitted
+          ? 'Payload exceeds the preview limit.'
+          : detail.output === undefined
+            ? 'No output recorded.'
+            : (detail.output | json)
+      }}</pre>
+    </aside>
+  </div>
+</section>

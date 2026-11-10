@@ -1,0 +1,83 @@
+{
+  "schema_version": "1.0",
+  "kind": "main",
+  "id": "parent-with-parallel-subworkflows",
+  "version": 0,
+  "name": "Demo · Parallel child workflows",
+  "description": "Start two child workflows together, join their results, then end. Try with Avery and Jordan.",
+  "trigger": {
+    "type": "manual"
+  },
+  "input_schema": {
+    "type": "object",
+    "required": [
+      "customer",
+      "reviewer"
+    ],
+    "properties": {
+      "customer": {
+        "type": "string",
+        "minLength": 1
+      },
+      "reviewer": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  },
+  "steps": [
+    {
+      "id": "parallel-greetings",
+      "name": "Run both greetings together",
+      "type": "parallel",
+      "branches": [
+        {
+          "id": "customer",
+          "steps": [
+            {
+              "id": "greet-customer",
+              "name": "Greet customer",
+              "type": "subworkflow",
+              "definition_id": "parallel-greeting",
+              "version": 1,
+              "with": {
+                "name": "${input.customer}"
+              },
+              "timeout_seconds": 60
+            }
+          ]
+        },
+        {
+          "id": "reviewer",
+          "steps": [
+            {
+              "id": "greet-reviewer",
+              "name": "Greet reviewer",
+              "type": "subworkflow",
+              "definition_id": "parallel-greeting",
+              "version": 1,
+              "with": {
+                "name": "${input.reviewer}"
+              },
+              "timeout_seconds": 60
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "done",
+      "name": "Return both greetings and end",
+      "type": "end",
+      "message": "Both children finished. Workflow will end now.",
+      "with": {
+        "customer": "${steps.greet-customer.output.message}",
+        "reviewer": "${steps.greet-reviewer.output.message}"
+      }
+    }
+  ],
+  "output": {
+    "customer": "${steps.greet-customer.output.message}",
+    "reviewer": "${steps.greet-reviewer.output.message}"
+  }
+}

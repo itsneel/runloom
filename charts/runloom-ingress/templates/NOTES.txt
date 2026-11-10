@@ -1,0 +1,11 @@
+{{ if .Values.nginx.enabled -}}
+Optional NGINX controller enabled. This release owns cluster-scoped RBAC and its IngressClass.
+Configure Runloom separately with ingress.enabled=true and ingress.className={{ .Values.nginx.controller.ingressClass.name }}.
+Provide a reachable LoadBalancer address, DNS/hosts mapping and, for HTTPS, a TLS Secret in the Runloom namespace.
+Changing nginx.enabled to false on THIS release removes its controller resources.
+Migrate routes before disabling/uninstalling it. Never adopt another operator's release or IngressClass.
+{{ else -}}
+Controller disabled: no controller resources are created by this chart.
+Use your existing ingress controller, externally managed routing, or local port-forwarding.
+Runloom application upgrades never install, upgrade or remove this separate release.
+{{ end }}

@@ -1,0 +1,257 @@
+# Run from the repository root with --project-directory . so paths stay root-relative.
+name: runloom
+
+x-app: &app
+  image: ${WORKFLOWS_IMAGE:-runloom-workflows:local}
+  build:
+    context: ./server/workflows
+  restart: unless-stopped
+  read_only: true
+  tmpfs: [/tmp]
+  security_opt: [no-new-privileges:true]
+  cap_drop: [ALL]
+  stop_grace_period: 45s
+
+services:
+  identity-db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: development-only
+    volumes:
+      - identity-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak -d keycloak"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  mailpit:
+    image: axllent/mailpit:v1.27
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${MAILPIT_PORT:-8025}:8025"
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.4.7
+    command: ["start-dev", "--import-realm"]
+    restart: unless-stopped
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://identity-db:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: development-only
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: development-only
+      KC_HTTP_RELATIVE_PATH: /auth
+      KC_HOSTNAME: ${RUNLOOM_PUBLIC_URL:-http://localhost:${UI_PORT:-4200}}/auth
+      RUNLOOM_PUBLIC_URL: ${RUNLOOM_PUBLIC_URL:-http://localhost:${UI_PORT:-4200}}
+      RUNLOOM_SMTP_HOST: mailpit
+      KC_PROXY_HEADERS: xforwarded
+      KC_HEALTH_ENABLED: "true"
+      KC_HTTP_MANAGEMENT_RELATIVE_PATH: /
+    ports:
+      - "127.0.0.1:${KEYCLOAK_PORT:-18081}:8080"
+    volumes:
+      - ./deploy/keycloak/runloom-realm.json:/opt/keycloak/data/import/runloom-realm.json:ro
+      - ./charts/runloom/files/keycloak-theme/runloom:/opt/keycloak/themes/runloom:ro
+    healthcheck:
+      test: ["CMD", "bash", "-ec", "exec 3<>/dev/tcp/127.0.0.1/9000; printf 'GET /health/ready HTTP/1.0\\r\\n\\r\\n' >&3; IFS= read -r response <&3; [[ \"$$response\" == *200* ]]"]
+      interval: 5s
+      timeout: 3s
+      start_period: 60s
+      retries: 40
+    depends_on:
+      identity-db:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: runloom
+      POSTGRES_USER: runloom
+      POSTGRES_PASSWORD: runloom
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U runloom -d runloom"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+  mongodb:
+    image: mongo:8
+    command: ["mongod", "--replSet", "runloom", "--bind_ip_all"]
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${MONGODB_PORT:-27017}:27017"
+    volumes:
+      - mongodb-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "try { if (!rs.status().ok) quit(1); if (!db.hello().isWritablePrimary) quit(1); } catch (e) { rs.initiate({_id:'runloom',members:[{_id:0,host:'mongodb:27017'}]}); quit(1); }"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  temporal:
+    image: temporalio/temporal:1.8.3
+    restart: unless-stopped
+    command:
+      - server
+      - start-dev
+      - --ip
+      - 0.0.0.0
+      - --db-filename
+      - /home/temporal/temporal.db
+    ports:
+      - "127.0.0.1:${TEMPORAL_PORT:-7233}:7233"
+      - "127.0.0.1:${TEMPORAL_UI_PORT:-8233}:8233"
+    volumes:
+      - temporal-data:/home/temporal
+    healthcheck:
+      test: ["CMD", "temporal", "operator", "cluster", "health", "--address", "localhost:7233"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+  api:
+    <<: *app
+    environment:
+      RUNLOOM_CONFIG_FILE: /etc/runloom/config.yaml
+    configs:
+      - {source: runloom-base, target: /etc/runloom/config.yaml}
+      - {source: runloom-api, target: /etc/runloom/config.d/10-api.yaml}
+    secrets: [database-url]
+    ports:
+      - "127.0.0.1:${API_PORT:-8080}:8080"
+    depends_on:
+      temporal:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+
+  worker:
+    <<: *app
+    image: ${WORKER_IMAGE:-runloom-worker:local}
+    build:
+      context: ./server/workflows
+      dockerfile: Dockerfile.worker
+    entrypoint: ["/runloom-worker"]
+    environment:
+      RUNLOOM_CONFIG_FILE: /etc/runloom/config.yaml
+    configs:
+      - {source: runloom-base, target: /etc/runloom/config.yaml}
+      - {source: runloom-worker, target: /etc/runloom/config.d/10-worker.yaml}
+    secrets: [database-url, llm-api-key]
+    healthcheck:
+      test: ["CMD", "/runloom-worker", "healthcheck", "http://127.0.0.1:8081/readyz"]
+      interval: 10s
+      timeout: 5s
+      start_period: 30s
+      retries: 6
+    depends_on:
+      temporal:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+
+  workflows-ui:
+    image: ${WORKFLOWS_UI_IMAGE:-runloom-workflows-ui:local}
+    build:
+      context: ./studio/projects/workflows
+    restart: unless-stopped
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+
+  management-ui:
+    image: ${MANAGEMENT_UI_IMAGE:-runloom-management-ui:local}
+    build:
+      context: ./studio/projects/management
+    restart: unless-stopped
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+
+  platform-ui:
+    image: ${PLATFORM_UI_IMAGE:-runloom-platform-ui:local}
+    build:
+      context: ./studio/projects/platform-admin
+    restart: unless-stopped
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+
+  docs:
+    image: ${DOCS_IMAGE:-runloom-docs:local}
+    build:
+      context: ./docs-site
+    restart: unless-stopped
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    ports:
+      - "127.0.0.1:${DOCS_PORT:-4400}:8080"
+    configs:
+      - source: docs-studio
+        target: /usr/share/nginx/html/studio.json
+
+  ui:
+    image: ${UI_IMAGE:-runloom-ui:local}
+    build:
+      context: ./studio/projects/host
+    restart: unless-stopped
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    configs:
+      - source: studio-documentation
+        target: /usr/share/nginx/html/documentation.json
+    ports:
+      - "127.0.0.1:${UI_PORT:-4200}:8080"
+    depends_on:
+      api:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+
+# JSON is a YAML-compatible representation, also used by the local setup validator.
+# Compose selects file paths only; applications read settings from these read-only files.
+configs:
+  studio-documentation:
+    file: ${RUNLOOM_DOCUMENTATION_CONFIG_PATH:-./compose/config/documentation.json}
+  docs-studio:
+    file: ${RUNLOOM_DOCS_STUDIO_CONFIG_PATH:-./compose/config/docs-studio.json}
+  runloom-base:
+    file: ${RUNLOOM_BASE_CONFIG_PATH:-./compose/config/base.yaml}
+  runloom-api:
+    file: ${RUNLOOM_API_CONFIG_PATH:-./compose/config/api.yaml}
+  runloom-worker:
+    file: ${RUNLOOM_WORKER_CONFIG_PATH:-./compose/config/worker.yaml}
+secrets:
+  database-url:
+    file: ${RUNLOOM_DATABASE_SECRET_PATH:-./deploy/local-postgres-url}
+  llm-api-key:
+    file: ${RUNLOOM_LLM_API_KEY_PATH:-./deploy/empty-llm-key}
+
+volumes:
+  identity-data:
+  temporal-data:
+  postgres-data:
+  mongodb-data:

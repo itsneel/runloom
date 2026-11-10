@@ -1,0 +1,2071 @@
+<!-- Empty compatibility slot for the platform v1 contract; navigation belongs to the host. -->
+<ng-template #workflowNavigation></ng-template>
+@if (routeLoading || routeError) {
+  <main class="route-status" [attr.aria-busy]="routeLoading">
+    <h1>{{ routeLoading ? 'Opening workspace…' : 'Unable to open this page' }}</h1>
+    <p [attr.role]="routeError ? 'alert' : 'status'">
+      {{ routeError || 'Loading the selected project or workflow.' }}
+    </p>
+    <button type="button" class="plain-button" (click)="backToProjects()">Back to projects</button>
+  </main>
+} @else if (!builderOpen) {
+  @if (projectsView && !projectOpened) {
+    <runloom-projects-dashboard
+      [projects]="projects"
+      [workflows]="definitions"
+      [loading]="projectsLoading || definitionsLoading"
+      [error]="projectsError || definitionsError"
+      [busy]="projectBusy"
+      [canEdit]="auth.canEdit()"
+      [showNavigationToggle]="showNavigationToggle"
+      [navigationExpanded]="navigationExpanded"
+      (toggleNavigation)="toggleNavigation.emit()"
+      (openProject)="openProject($event)"
+      (create)="createProject()"
+      (rename)="renameProject($event)"
+      (deleteProject)="deletion.project($event)"
+      (reload)="reloadProjects()"
+    />
+  } @else {
+    <runloom-workflow-dashboard
+      [workflows]="visibleDefinitions"
+      [projects]="projects"
+      [projectId]="activeProjectId"
+      [projectName]="projectName(activeProjectId)"
+      [showProjectsBack]="projectsView || !!routeProjectId"
+      [loading]="definitionsLoading || projectsLoading"
+      [error]="definitionsError || projectsError"
+      [openingId]="openingDefinitionId"
+      [canCreate]="auth.canEdit() && !projectBusy"
+      [canDelete]="auth.canEdit()"
+      [busy]="projectBusy"
+      [showNavigationToggle]="showNavigationToggle"
+      [navigationExpanded]="navigationExpanded"
+      (toggleNavigation)="toggleNavigation.emit()"
+      (details)="openDefinition($event)"
+      (deleteWorkflow)="deletion.workflow($event)"
+      (create)="newDefinition()"
+      (reload)="reloadProjects()"
+      (selectProject)="selectProject($event)"
+      (renameProject)="renameProject()"
+      (example)="loadExample($event)"
+      (backToProjects)="backToProjects()"
+    />
+  }
+  <runloom-notice
+    *ngIf="message"
+    [message]="message"
+    [tone]="messageError ? 'error' : 'success'"
+    [floating]="true"
+    [revision]="messageRevision"
+    dismissLabel="Dismiss message"
+    (dismissed)="message = ''"
+  />
+} @else {
+  <div class="studio-shell">
+    <header class="editor-header">
+      <div class="brand-block">
+        <button
+          class="plain-button"
+          type="button"
+          [disabled]="versions.saving || edit.acquiringEdit"
+          (click)="showDashboard(false)"
+        >
+          Back to workflows
+        </button>
+        <button
+          *ngIf="showNavigationToggle"
+          class="editor-sidebar-toggle"
+          type="button"
+          aria-label="Toggle workspace sidebar"
+          aria-controls="workspace-sidebar"
+          [attr.aria-expanded]="navigationExpanded"
+          (click)="toggleNavigation.emit()"
+        >
+          <runloom-icon name="sidebar" />
+        </button>
+        <div class="breadcrumb">
+          <span>{{ auth.team()?.name }}</span
+          ><b>/</b
+          ><input
+            aria-label="Workflow name"
+            [disabled]="!edit.canEditWorkflow"
+            [(ngModel)]="definition.name"
+            (ngModelChange)="markChanged()"
+          />
+        </div>
+        <button
+          class="version-pill"
+          type="button"
+          [class.published]="definition.version > 0"
+          (click)="versions.openVersions()"
+        >
+          {{ publishLabel }} · History
+        </button>
+        <span class="unsaved-indicator" role="status" aria-live="polite">{{ saveStatus }}</span>
+        <button
+          *ngIf="hasUnsavedChanges && (autosave.failed || versions.saveFailed)"
+          class="plain-button"
+          type="button"
+          [disabled]="versions.saving || !edit.canEditWorkflow"
+          (click)="autosave.retry()"
+        >
+          Retry save
+        </button>
+      </div>
+      <div class="header-actions">
+        <span class="engine-status" [class.offline]="!connected"
+          ><i></i>{{ connected ? 'Engine ready' : 'Engine offline' }}</span
+        >
+        <button
+          class="plain-button"
+          type="button"
+          title="Undo (Ctrl/Cmd+Z)"
+          aria-keyshortcuts="Control+Z Meta+Z"
+          [disabled]="!canUseHistory || !history.canUndo"
+          (click)="restoreHistory()"
+        >
+          Undo
+        </button>
+        <button
+          class="plain-button"
+          type="button"
+          title="Redo (Ctrl/Cmd+Shift+Z)"
+          aria-keyshortcuts="Control+Shift+Z Meta+Shift+Z"
+          [disabled]="!canUseHistory || !history.canRedo"
+          (click)="restoreHistory(true)"
+        >
+          Redo
+        </button>
+        <button
+          class="plain-button"
+          type="button"
+          aria-haspopup="dialog"
+          (click)="shortcuts.showModal()"
+        >
+          Keyboard shortcuts
+        </button>
+        <button class="plain-button" type="button" (click)="openJson()">JSON</button>
+        <button
+          class="plain-button"
+          type="button"
+          title="Save draft (Ctrl/Cmd+S)"
+          aria-keyshortcuts="Control+S Meta+S"
+          [disabled]="versions.saving || projectBusy || !edit.canEditWorkflow"
+          (click)="versions.save()"
+        >
+          {{ versions.saving ? 'Saving…' : 'Save' }}
+        </button>
+        <button
+          class="publish-button"
+          type="button"
+          [disabled]="
+            versions.saving || projectBusy || !edit.canEditWorkflow || !!draftValidationError
+          "
+          (click)="versions.publish()"
+        >
+          Publish
+        </button>
+        <button class="test-button" type="button" (click)="testRun.openRun()">
+          <runloom-icon name="play" />
+          {{ definition.kind === 'child' ? 'Test child workflow' : 'Test workflow' }}
+        </button>
+      </div>
+    </header>
+
+    <div class="edit-lock-banner interrupted" role="status" *ngIf="draftValidationError">
+      <span class="edit-lock-copy"
+        ><strong>Draft needs attention — publishing is blocked</strong
+        ><span>{{ draftValidationError }}</span
+        ><span>You can keep editing and save your progress.</span></span
+      >
+    </div>
+
+    <div
+      class="edit-lock-banner"
+      [class.editing]="edit.ownsEdit"
+      [class.interrupted]="edit.editingInterrupted"
+      *ngIf="!isNewWorkflow || edit.editLock?.locked"
+    >
+      <span class="edit-lock-icon" aria-hidden="true"
+        ><svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.7"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <rect x="5" y="10" width="14" height="11" rx="2" />
+          <path d="M8 10V7a4 4 0 0 1 8 0v3m-4 5v2" /></svg
+      ></span>
+      <span class="edit-lock-copy" role="status"
+        ><strong>{{ edit.editHeading }}</strong
+        ><span>{{ edit.editMessage }}</span></span
+      >
+      <button
+        class="plain-button"
+        type="button"
+        *ngIf="edit.editingInterrupted"
+        (click)="openJson()"
+      >
+        View unsaved JSON
+      </button>
+      <button
+        class="plain-button"
+        type="button"
+        *ngIf="auth.canEdit() && !edit.ownsEdit"
+        [disabled]="edit.acquiringEdit || versions.saving || projectBusy"
+        (click)="edit.editWorkflow()"
+      >
+        {{ edit.acquiringEdit ? 'Opening editor…' : 'Edit workflow' }}
+      </button>
+      <button
+        class="plain-button"
+        type="button"
+        *ngIf="edit.ownsEdit"
+        [disabled]="versions.saving || projectBusy"
+        (click)="edit.finishEditing()"
+      >
+        Finish editing
+      </button>
+    </div>
+
+    <runloom-notice
+      *ngIf="message && !jsonOpen && !testRun.runOpen && !versions.versionOpen"
+      [message]="message"
+      [tone]="messageError ? 'error' : 'success'"
+      [floating]="true"
+      [revision]="messageRevision"
+      dismissLabel="Dismiss message"
+      (dismissed)="message = ''"
+    />
+
+    <div class="editor-body" [class.with-inspector]="editor.inspectorOpen || editor.nodePickerOpen">
+      <main class="graph-area">
+        <div class="graph-toolbar">
+          <div>
+            <label class="workflow-project-label"
+              >Project
+              <select
+                aria-label="Workflow project"
+                [disabled]="versions.saving || projectBusy || !edit.canEditWorkflow"
+                [ngModel]="workflowProjectId"
+                (change)="moveWorkflowProject($any($event.target).value, $any($event.target))"
+              >
+                <option *ngFor="let project of projects" [value]="project.id">
+                  {{ project.name }}
+                </option>
+              </select></label
+            ><span>{{ editor.nodeCount }} nodes</span>
+          </div>
+          <div>
+            <button
+              [disabled]="!edit.canEditWorkflow || versions.saving"
+              type="button"
+              title="Check workflow"
+              (click)="validate()"
+            >
+              <runloom-icon name="check" /> Check</button
+            ><button
+              [disabled]="!edit.canEditWorkflow || versions.saving"
+              type="button"
+              title="Add node"
+              (click)="editor.openNodePicker()"
+            >
+              <runloom-icon name="plus" /> Add node
+            </button>
+          </div>
+        </div>
+
+        <runloom-signal-handlers
+          #handlerList
+          [definition]="definition"
+          [editable]="edit.canEditWorkflow"
+          [saving]="versions.saving"
+          (changed)="markChanged()"
+        />
+        <runloom-workflow-graph
+          [handlers]="definition.signal_handlers || []"
+          (handlerSelected)="editor.selectHandler(); handlerList.focusHandler($event)"
+          [steps]="definition.steps"
+          [nodeErrors]="nodeErrors"
+          [positions]="definition.layout?.positions || editor.emptyPositions"
+          [workflowKey]="definition.id"
+          (layoutChanged)="editor.updateCanvasLayout($event)"
+          [selected]="editor.selectedStep"
+          [editable]="edit.canEditWorkflow && !versions.saving"
+          [palette]="palette"
+          (selectedNode)="editor.selectStep($event.index, $event.steps)"
+          (insertNode)="editor.openNodePicker($event.index, $event.steps)"
+          (duplicateNode)="editor.duplicateStep($event.index, $event.steps)"
+          (deleteNode)="editor.removeStep($event.index, $event.steps)"
+          (moveNode)="editor.moveGraphNode($event)"
+          (addBranch)="editor.addParallelBranch($event)"
+        >
+          <button
+            class="trigger-node"
+            type="button"
+            [class.selected]="editor.selectedIndex === -1 && editor.inspectorOpen"
+            (click)="editor.selectTrigger()"
+          >
+            <span class="node-handle output"></span
+            ><span class="node-icon trigger">{{
+              definition.trigger.type === 'webhook' ? '⚡' : '▶'
+            }}</span>
+            <span class="node-copy"
+              ><small>TRIGGER</small
+              ><strong>{{
+                definition.kind === 'child'
+                  ? 'Called by a parent'
+                  : definition.trigger.type === 'webhook'
+                    ? 'On webhook call'
+                    : 'When clicking Test'
+              }}</strong
+              ><em>{{
+                definition.kind === 'child'
+                  ? 'Child-only workflow'
+                  : definition.trigger.type === 'webhook'
+                    ? 'POST /' + definition.trigger.path
+                    : 'Started manually'
+              }}</em></span
+            >
+          </button>
+        </runloom-workflow-graph>
+
+        <section class="rules-dock" [class.expanded]="rulesOpen">
+          <button class="rules-toggle" type="button" (click)="rulesOpen = !rulesOpen">
+            <span>ⓘ</span
+            ><span
+              ><strong>Durable wait rules</strong
+              ><small>Callbacks, signals, pauses and resumes survive restarts</small></span
+            ><runloom-icon [name]="rulesOpen ? 'chevron-down' : 'chevron-up'" />
+          </button>
+          <div class="rules-grid" *ngIf="rulesOpen">
+            <div>
+              <span class="rule-icon blue">◷</span>
+              <p>
+                <strong>Wait</strong
+                ><small>A durable clock continues automatically when its time ends.</small>
+              </p>
+            </div>
+            <div>
+              <span class="rule-icon cyan">↩</span>
+              <p>
+                <strong>Callback</strong
+                ><small
+                  >A system responds to one exact run and step. The payload becomes that node's
+                  output.</small
+                >
+              </p>
+            </div>
+            <div>
+              <span class="rule-icon indigo">ϟ</span>
+              <p>
+                <strong>Signal</strong
+                ><small
+                  >A named event wakes the matching signal node without exposing Temporal
+                  details.</small
+                >
+              </p>
+            </div>
+            <div>
+              <span class="rule-icon amber">Ⅱ</span>
+              <p>
+                <strong>Pause</strong
+                ><small
+                  >Only an explicit resume for the current checkpoint continues the run.</small
+                >
+              </p>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <aside class="node-picker" *ngIf="editor.nodePickerOpen && edit.canEditWorkflow">
+        <div class="picker-head">
+          <div>
+            <span class="eyebrow">Node library</span>
+            <h2>What happens next?</h2>
+          </div>
+          <button
+            class="square-button"
+            aria-label="Close node library"
+            type="button"
+            (click)="editor.nodePickerOpen = false"
+          >
+            <runloom-icon name="close" />
+          </button>
+        </div>
+        <label class="picker-search"
+          ><span>⌕</span
+          ><input autofocus [(ngModel)]="editor.nodeSearch" placeholder="Search nodes…"
+        /></label>
+        <p class="picker-group">Core nodes</p>
+        <button
+          class="picker-row"
+          type="button"
+          *ngFor="let item of editor.filteredPalette"
+          (click)="editor.addStep(item.type)"
+        >
+          <span class="node-icon" [attr.data-tone]="item.tone">{{ item.icon }}</span
+          ><span
+            ><strong>{{ item.label }}</strong
+            ><small>{{ item.summary }}</small></span
+          ><b>＋</b>
+        </button>
+        <p class="picker-empty" *ngIf="editor.filteredPalette.length === 0">
+          No nodes match “{{ editor.nodeSearch }}”.
+        </p>
+        <div class="picker-tip">
+          <span>✦</span>
+          <p>
+            <strong>AI node credentials stay outside workflow JSON.</strong
+            ><small>Operators configure the model provider on the worker.</small>
+          </p>
+        </div>
+      </aside>
+
+      <aside class="inspector" *ngIf="editor.inspectorOpen">
+        <fieldset class="edit-fields" [disabled]="!edit.canEditWorkflow">
+          <ng-container *ngIf="editor.selectedStep as step; else triggerSettings">
+            <div class="inspector-head">
+              <div class="inspector-title">
+                <span class="node-icon" [attr.data-tone]="stepTone(step)">{{ stepIcon(step) }}</span
+                ><span
+                  ><small>{{ stepLabel(step) }}</small
+                  ><strong>{{ step.name || step.id }}</strong></span
+                >
+              </div>
+              <button
+                class="square-button"
+                aria-label="Close node settings"
+                type="button"
+                (click)="editor.inspectorOpen = false"
+              >
+                <runloom-icon name="close" />
+              </button>
+            </div>
+            <div class="inspector-tabs">
+              <button class="active" type="button">Parameters</button
+              ><button type="button" (click)="openJson()">JSON</button>
+            </div>
+            <div class="inspector-body">
+              <div
+                class="node-validation-message"
+                role="status"
+                *ngIf="nodeErrors[step.id] as error"
+              >
+                <strong>This node needs attention</strong>
+                <p>{{ error }}</p>
+              </div>
+              <label class="field"
+                ><span>Node name</span
+                ><input [(ngModel)]="step.name" (ngModelChange)="editor.updateStep()"
+              /></label>
+              <label class="field"
+                ><span>Node ID <i>used by callbacks</i></span
+                ><input
+                  [(ngModel)]="step.id"
+                  (ngModelChange)="markChanged()"
+                  (change)="editor.updateStep()"
+              /></label>
+
+              <p class="rule-note" *ngIf="!editor.nodeConfigurationReady(step)">
+                This node’s configuration is incomplete. Your draft can still be saved. Open JSON to
+                complete its configuration, or replace the node from the node library.
+              </p>
+              <ng-container *ngIf="editor.nodeConfigurationReady(step)"
+                ><ng-container [ngSwitch]="step.type">
+                  <runloom-integration-editor
+                    *ngSwitchCase="'integration'"
+                    [step]="step"
+                    [editable]="edit.canEditWorkflow"
+                    (changed)="markChanged()"
+                  />
+                  <runloom-data-editor
+                    *ngSwitchCase="'transform'"
+                    [step]="step"
+                    [editable]="edit.canEditWorkflow"
+                    [draft]="editor.databaseDraft(step)"
+                    (invalid)="editor.setDatabaseDraft(step, $event)"
+                    (changed)="markChanged()"
+                  />
+                  <runloom-data-editor
+                    *ngSwitchCase="'collection'"
+                    [step]="step"
+                    [editable]="edit.canEditWorkflow"
+                    [draft]="editor.databaseDraft(step)"
+                    (invalid)="editor.setDatabaseDraft(step, $event)"
+                    (changed)="markChanged()"
+                  />
+                  <runloom-data-editor
+                    *ngSwitchCase="'merge'"
+                    [step]="step"
+                    [editable]="edit.canEditWorkflow"
+                    [draft]="editor.databaseDraft(step)"
+                    (invalid)="editor.setDatabaseDraft(step, $event)"
+                    (changed)="markChanged()"
+                  />
+                  <runloom-data-editor
+                    *ngSwitchCase="'foreach'"
+                    [step]="step"
+                    [editable]="edit.canEditWorkflow"
+                    [draft]="editor.databaseDraft(step)"
+                    (invalid)="editor.setDatabaseDraft(step, $event)"
+                    (changed)="markChanged()"
+                    (addBodyNode)="
+                      editor.openNodePicker(step.branches![0].steps.length, step.branches![0].steps)
+                    "
+                  />
+                  <div *ngSwitchCase="'fail'">
+                    <label class="field"
+                      ><span>Failure reason</span
+                      ><textarea
+                        aria-label="Failure reason"
+                        rows="3"
+                        maxlength="2000"
+                        [(ngModel)]="step.message"
+                        (ngModelChange)="markChanged()"
+                      ></textarea>
+                    </label>
+                    <p>
+                      This node fails the workflow. It does not complete it successfully or pause
+                      it. Previously completed external actions are not undone.
+                    </p>
+                  </div>
+                  <runloom-database-editor
+                    *ngSwitchCase="'database'"
+                    [step]="step"
+                    [editable]="edit.canEditWorkflow"
+                    [draft]="editor.databaseDraft(step)"
+                    (invalid)="editor.setDatabaseDraft(step, $event)"
+                    (changed)="markChanged()"
+                  />
+                  <div *ngSwitchCase="'email'">
+                    <label class="field"
+                      ><span>To</span
+                      ><textarea
+                        aria-label="Email To"
+                        rows="2"
+                        [ngModel]="editor.emailRecipientsText(step, 'to')"
+                        (ngModelChange)="editor.setEmailRecipients('to', $event)"
+                      ></textarea>
+                    </label>
+                    <label class="field"
+                      ><span>CC (optional)</span
+                      ><textarea
+                        aria-label="Email CC"
+                        rows="2"
+                        [ngModel]="editor.emailRecipientsText(step, 'cc')"
+                        (ngModelChange)="editor.setEmailRecipients('cc', $event)"
+                      ></textarea>
+                    </label>
+                    <label class="field"
+                      ><span>BCC (optional)</span
+                      ><textarea
+                        aria-label="Email BCC"
+                        rows="2"
+                        [ngModel]="editor.emailRecipientsText(step, 'bcc')"
+                        (ngModelChange)="editor.setEmailRecipients('bcc', $event)"
+                      ></textarea>
+                    </label>
+                    <p class="empty-copy">
+                      Use one plain address per line or separate addresses with commas. Each address
+                      can reference workflow input or an earlier node. Maximum 50 recipients in
+                      total.
+                    </p>
+                    <label class="field"
+                      ><span>Reply-To (optional)</span
+                      ><input
+                        aria-label="Email Reply-To"
+                        [(ngModel)]="step.email!.reply_to"
+                        (ngModelChange)="markChanged()"
+                    /></label>
+                    <label class="field"
+                      ><span>Subject</span
+                      ><input
+                        aria-label="Email subject"
+                        [(ngModel)]="step.email!.subject"
+                        (ngModelChange)="markChanged()"
+                    /></label>
+                    <label class="field"
+                      ><span>Plain text message</span
+                      ><textarea
+                        aria-label="Email text"
+                        rows="8"
+                        [(ngModel)]="step.email!.text"
+                        (ngModelChange)="markChanged()"
+                      ></textarea>
+                    </label>
+                    <label class="field"
+                      ><span>HTML alternative (optional)</span
+                      ><textarea
+                        aria-label="Email HTML"
+                        class="code"
+                        rows="5"
+                        [(ngModel)]="step.email!.html"
+                        (ngModelChange)="markChanged()"
+                      ></textarea>
+                    </label>
+                    <div class="rule-note blue">
+                      <strong>This node sends a real email</strong>
+                      <p>
+                        Save a draft and use Test workflow to send. Publishing is not required.
+                        Local Compose captures messages in Mailpit. SMTP credentials and From
+                        address are configured by the operator, never here.
+                      </p>
+                      <p>
+                        One attempt, 30-second timeout. SMTP acceptance is not proof of inbox
+                        delivery. If an acknowledgement is lost, check the provider before running
+                        again to avoid duplicates.
+                      </p>
+                      <p>
+                        BCC is hidden from recipients but remains visible in workflow definitions
+                        and history. Do not include secrets in messages. HTML values are not
+                        automatically escaped; prefer plain text for untrusted input.
+                      </p>
+                    </div>
+                  </div>
+                  <div *ngSwitchCase="'code'">
+                    <label class="field"
+                      ><span>Mapped workflow input (JSON)</span
+                      ><textarea
+                        class="code"
+                        aria-label="JavaScript mapped input"
+                        rows="5"
+                        [ngModel]="editor.stepDataText(step)"
+                        (ngModelChange)="editor.setObjectField('with', $event)"
+                      ></textarea>
+                    </label>
+                    <runloom-code-editor
+                      [step]="step"
+                      [editable]="edit.canEditWorkflow"
+                      (changed)="markChanged()"
+                    />
+                    <div class="rule-note blue">
+                      <strong>Use the result in later nodes</strong>
+                      <p>
+                        Reference this node through steps.&lt;node-id&gt;.output. Code and mapped
+                        inputs are saved and versioned with the workflow. Never paste credentials
+                        here: workflow inputs and outputs can appear in history.
+                      </p>
+                    </div>
+                  </div>
+                  <div *ngSwitchCase="'http'">
+                    <label class="field"
+                      ><span>Method</span
+                      ><select
+                        aria-label="API method"
+                        [(ngModel)]="step.http!.method"
+                        (ngModelChange)="markChanged()"
+                      >
+                        <option
+                          *ngFor="
+                            let method of [
+                              'GET',
+                              'POST',
+                              'PUT',
+                              'PATCH',
+                              'DELETE',
+                              'HEAD',
+                              'OPTIONS',
+                            ]
+                          "
+                        >
+                          {{ method }}
+                        </option>
+                      </select></label
+                    >
+                    <label class="field"
+                      ><span>HTTPS URL</span
+                      ><input
+                        aria-label="API URL"
+                        [(ngModel)]="step.http!.url"
+                        (ngModelChange)="markChanged()"
+                    /></label>
+                    <label class="field"
+                      ><span>Bearer secret name (optional)</span
+                      ><input
+                        aria-label="API secret name"
+                        [ngModel]="step.http!.secret_headers?.['Authorization']?.secret || ''"
+                        (ngModelChange)="editor.setAPISecret($event)"
+                        placeholder="billing-api-key"
+                    /></label>
+                    <p class="empty-copy">
+                      Ask a team admin to add the secret under Management → Workflow secrets. Enter
+                      only its name here, never the secret value.
+                    </p>
+                    <label class="field"
+                      ><span>Request configuration (JSON)</span
+                      ><textarea
+                        aria-label="API request configuration"
+                        class="code"
+                        rows="10"
+                        [ngModel]="editor.httpDataText(step)"
+                        (ngModelChange)="editor.setHTTPData($event)"
+                      ></textarea>
+                    </label>
+                    <div class="two-fields">
+                      <label class="field"
+                        ><span>Timeout (seconds)</span
+                        ><input
+                          type="number"
+                          min="1"
+                          max="300"
+                          [(ngModel)]="step.timeout_seconds"
+                          (ngModelChange)="markChanged()" /></label
+                      ><label class="field"
+                        ><span>Maximum attempts</span
+                        ><input
+                          type="number"
+                          min="1"
+                          max="100"
+                          [ngModel]="step.retry?.maximum_attempts"
+                          (ngModelChange)="editor.setRetryAttempts(step, $event)"
+                      /></label>
+                    </div>
+                    <div class="rule-note blue">
+                      <strong>External calls can have side effects</strong>
+                      <p>
+                        One attempt by default. Use the provider's idempotency mechanism before
+                        enabling retries. HTTPS public destinations only; redirects are blocked. URL
+                        paths and JSON body can reference input or earlier steps. Read status_code
+                        and body from this node's output.
+                      </p>
+                      <p>
+                        Named team credentials are inserted only by the worker. There is no
+                        per-secret destination restriction; use trusted APIs. Do not put credentials
+                        in URLs, plain headers or the body.
+                      </p>
+                    </div>
+                  </div>
+                  <div *ngSwitchCase="'end'">
+                    <div class="rule-note green">
+                      <strong>Workflow will end now</strong>
+                      <p>
+                        This node completes the current workflow successfully. No later nodes
+                        execute, including after a containing decision. Ending a child returns its
+                        result to the parent. Put End after a parallel join, never within a parallel
+                        branch.
+                      </p>
+                    </div>
+                    <label class="field"
+                      ><span>Completion message</span
+                      ><input [(ngModel)]="step.message" (ngModelChange)="markChanged()"
+                    /></label>
+                    <label class="field"
+                      ><span>Final output (JSON)</span
+                      ><textarea
+                        aria-label="End output"
+                        class="code"
+                        rows="6"
+                        [ngModel]="editor.stepDataText(step)"
+                        (ngModelChange)="editor.setObjectField('with', $event)"
+                      ></textarea>
+                    </label>
+                  </div>
+                  <div *ngSwitchCase="'subworkflow'">
+                    <label class="field"
+                      ><span>Child workflow</span
+                      ><select
+                        aria-label="Subworkflow"
+                        [ngModel]="step.definition_id"
+                        (ngModelChange)="editor.selectSubworkflow($event)"
+                      >
+                        <option value="">Choose a child workflow</option>
+                        <option
+                          *ngIf="step.definition_id && !step.version"
+                          [value]="step.definition_id"
+                        >
+                          {{ step.definition_id }} · Draft reference
+                        </option>
+                        <option *ngFor="let item of publishedChildren" [value]="item.id">
+                          {{ item.name }}
+                        </option>
+                      </select></label
+                    >
+                    <p class="empty-copy" *ngIf="step.definition_id && !step.version">
+                      This child is attached as a draft. Publish the child, then select its
+                      published version here before publishing or running the parent.
+                    </p>
+                    <p class="empty-copy" *ngIf="publishedChildren.length === 0">
+                      Create a workflow, set its kind to Child, then publish it before adding a
+                      Subworkflow node.
+                    </p>
+                    <label class="field"
+                      ><span>Pinned version</span
+                      ><input
+                        aria-label="Subworkflow version"
+                        type="number"
+                        min="1"
+                        [(ngModel)]="step.version"
+                        (ngModelChange)="markChanged()"
+                    /></label>
+                    <label class="field"
+                      ><span>Mapped input</span
+                      ><textarea
+                        class="code"
+                        aria-label="Subworkflow input"
+                        rows="7"
+                        [ngModel]="editor.stepDataText(step)"
+                        (ngModelChange)="editor.setObjectField('with', $event)"
+                      ></textarea>
+                    </label>
+                    <label class="field"
+                      ><span>Maximum duration in seconds</span
+                      ><input
+                        type="number"
+                        min="1"
+                        max="31536000"
+                        [(ngModel)]="step.timeout_seconds"
+                        (ngModelChange)="markChanged()"
+                    /></label>
+                    <div class="rule-note violet">
+                      <strong>Reusable, versioned workflow</strong>
+                      <p>
+                        Publish the child first, then select its version here. The parent waits for
+                        its result. Child failures fail the parent; canceling the parent cancels its
+                        children. Send callbacks, signals and resumes to the child run itself.
+                      </p>
+                      <p>
+                        Use expressions such as $&#123;input.customer&#125; in mapped input. Read
+                        the result from $&#123;steps.{{ step.id }}.output&#125;.
+                      </p>
+                    </div>
+                  </div>
+                  <div *ngSwitchCase="'activity'">
+                    <label class="field"
+                      ><span>Action</span
+                      ><select [(ngModel)]="step.activity" (ngModelChange)="markChanged()">
+                        <option value="runloom.echo">Return data</option>
+                        <option value="runloom.compose">Compose message</option>
+                        <option value="runloom.sum">Add numbers</option>
+                      </select></label
+                    >
+                    <label class="field"
+                      ><span>Input data</span
+                      ><textarea
+                        class="code"
+                        rows="7"
+                        [ngModel]="editor.stepDataText(step)"
+                        (ngModelChange)="editor.setObjectField('with', $event)"
+                      ></textarea>
+                    </label>
+                    <div class="two-fields">
+                      <label class="field"
+                        ><span>Timeout</span
+                        ><input
+                          type="number"
+                          min="1"
+                          [(ngModel)]="step.timeout_seconds"
+                          (ngModelChange)="markChanged()" /></label
+                      ><label class="field"
+                        ><span>Retries</span
+                        ><input
+                          type="number"
+                          min="1"
+                          max="100"
+                          [ngModel]="step.retry?.maximum_attempts"
+                          (ngModelChange)="editor.setRetryAttempts(step, $event)"
+                      /></label>
+                    </div>
+                    <div class="rule-note violet">
+                      <strong>Retry-safe action</strong>
+                      <p>
+                        External work runs as a Temporal activity. Completed work is not repeated
+                        during replay.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div *ngSwitchCase="'llm'">
+                    <runloom-llm-task-editor
+                      [step]="step"
+                      [editable]="edit.canEditWorkflow"
+                      (changed)="markChanged()"
+                    />
+                    <label class="field"
+                      ><span>Model</span
+                      ><input
+                        [(ngModel)]="step.model"
+                        (ngModelChange)="markChanged()"
+                        placeholder="default"
+                    /></label>
+                    <runloom-prompt-editor
+                      [step]="step"
+                      [definition]="definition"
+                      [editable]="edit.canEditWorkflow && !versions.saving"
+                      (changed)="markChanged()"
+                      (runCreated)="testRun.openRelatedRun($event)"
+                    />
+                    <div class="two-fields">
+                      <label class="field"
+                        ><span>Temperature</span
+                        ><input
+                          type="number"
+                          min="0"
+                          max="2"
+                          step="0.1"
+                          [(ngModel)]="step.temperature"
+                          (ngModelChange)="markChanged()" /></label
+                      ><label class="field"
+                        ><span>Max tokens</span
+                        ><input
+                          type="number"
+                          min="1"
+                          [(ngModel)]="step.max_tokens"
+                          (ngModelChange)="markChanged()"
+                      /></label>
+                    </div>
+                    <div class="two-fields">
+                      <label class="field"
+                        ><span>Timeout</span
+                        ><input
+                          type="number"
+                          min="1"
+                          [(ngModel)]="step.timeout_seconds"
+                          (ngModelChange)="markChanged()" /></label
+                      ><label class="field"
+                        ><span>Retries</span
+                        ><input
+                          type="number"
+                          min="1"
+                          max="100"
+                          [ngModel]="step.retry?.maximum_attempts"
+                          (ngModelChange)="editor.setRetryAttempts(step, $event)"
+                      /></label>
+                    </div>
+                    <div class="rule-note ai">
+                      <strong>Safe AI execution</strong>
+                      <p>
+                        Model calls run outside deterministic workflow code. API keys are worker
+                        secrets and are never saved in this definition.
+                      </p>
+                    </div>
+                    <div class="rule-note ai">
+                      <strong>Human review assessment is required</strong>
+                      <p>
+                        Every response includes hitl_required (true or false) and hitl_reason. Use
+                        the flag in a Condition leading to an Approval node. Missing or invalid
+                        flags fail the node. A strict JSON Schema-compatible model is required.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div *ngSwitchCase="'decision'" class="branch-editor">
+                    <label class="field"
+                      ><span>Decision mode</span
+                      ><select
+                        aria-label="Decision mode"
+                        [ngModel]="step.decision!.mode"
+                        (ngModelChange)="editor.setDecisionMode(step, $event)"
+                      >
+                        <option value="single">Choose one action</option>
+                        <option value="multiple">Choose several actions</option>
+                        <option value="agent">Decide repeatedly</option>
+                      </select></label
+                    >
+                    <label class="field"
+                      ><span>Model</span
+                      ><input
+                        aria-label="Decision model"
+                        [(ngModel)]="step.model"
+                        (ngModelChange)="markChanged()"
+                        placeholder="default"
+                    /></label>
+                    <runloom-prompt-editor
+                      [step]="step"
+                      [definition]="definition"
+                      [editable]="edit.canEditWorkflow && !versions.saving"
+                      (changed)="markChanged()"
+                      (runCreated)="testRun.openRelatedRun($event)"
+                    />
+                    <label class="field" *ngIf="step.decision!.mode === 'multiple'"
+                      ><span>Run selected actions</span
+                      ><select
+                        aria-label="Decision execution"
+                        [(ngModel)]="step.decision!.execution"
+                        (ngModelChange)="markChanged()"
+                      >
+                        <option value="sequential">In the selected order</option>
+                        <option value="parallel">In parallel, then join</option>
+                      </select></label
+                    >
+                    <label class="field" *ngIf="step.decision!.mode === 'agent'"
+                      ><span>Maximum decision rounds (including finish)</span
+                      ><input
+                        aria-label="Decision round limit"
+                        type="number"
+                        min="1"
+                        max="20"
+                        [(ngModel)]="step.decision!.max_rounds"
+                        (ngModelChange)="markChanged()"
+                    /></label>
+                    <label class="field" *ngIf="step.decision!.mode !== 'single'"
+                      ><span>Maximum total actions</span
+                      ><input
+                        aria-label="Decision action limit"
+                        type="number"
+                        min="1"
+                        max="50"
+                        [(ngModel)]="step.decision!.max_actions"
+                        (ngModelChange)="markChanged()"
+                    /></label>
+                    <div class="two-fields">
+                      <label class="field"
+                        ><span>Model timeout (seconds)</span
+                        ><input
+                          aria-label="Decision timeout"
+                          type="number"
+                          min="1"
+                          max="1800"
+                          [(ngModel)]="step.timeout_seconds"
+                          (ngModelChange)="markChanged()" /></label
+                      ><label class="field"
+                        ><span>Maximum response tokens</span
+                        ><input
+                          aria-label="Decision tokens"
+                          type="number"
+                          min="1"
+                          max="128000"
+                          [(ngModel)]="step.max_tokens"
+                          (ngModelChange)="markChanged()"
+                      /></label>
+                    </div>
+                    <section *ngFor="let branch of step.branches; let i = index">
+                      <label class="field"
+                        ><span>Action ID</span
+                        ><input
+                          [attr.aria-label]="'Decision action ' + (i + 1) + ' ID'"
+                          [ngModel]="branch.id"
+                          (change)="editor.renameBranch(step, i, $any($event.target).value)"
+                      /></label>
+                      <label class="field"
+                        ><span>When should AI choose this action?</span
+                        ><textarea
+                          [attr.aria-label]="'Decision action ' + (i + 1) + ' description'"
+                          rows="2"
+                          maxlength="2000"
+                          [(ngModel)]="branch.description"
+                          (ngModelChange)="markChanged()"
+                        ></textarea>
+                      </label>
+                      <p
+                        class="error-text"
+                        *ngIf="!branch.steps.length || !branch.description?.trim()"
+                      >
+                        Add a description and at least one node before testing.
+                      </p>
+                      <button
+                        class="plain-button"
+                        type="button"
+                        (click)="editor.openNodePicker(branch.steps.length, branch.steps)"
+                      >
+                        Add node to {{ branch.id }}
+                      </button>
+                      <button
+                        class="danger-link"
+                        type="button"
+                        [disabled]="step.branches!.length <= 1"
+                        (click)="editor.removeBranch(step, i)"
+                      >
+                        Remove action
+                      </button>
+                    </section>
+                    <button
+                      class="plain-button full"
+                      type="button"
+                      [disabled]="step.branches!.length >= 20"
+                      (click)="editor.addParallelBranch(step)"
+                    >
+                      Add available action
+                    </button>
+                    <div class="rule-note ai">
+                      <strong>Human review on every decision</strong>
+                      <p>
+                        Every round returns hitl_required and hitl_reason. When review is required,
+                        the model must hand off without selecting actions. The node pauses for an
+                        operator; resume continues after this node without running a proposed
+                        action.
+                      </p>
+                    </div>
+                    <div class="rule-note ai">
+                      <strong>Only your defined actions can run</strong>
+                      <p>
+                        Requires a model supporting strict JSON Schema responses. Invalid decisions
+                        fail safely. Finish continues after this node; human handoff pauses until an
+                        operator resumes. Round or action exhaustion fails the run. Action failures
+                        are fail-fast, not rolled back.
+                      </p>
+                      <p>
+                        Repeated mode receives previous results. Each invocation has fresh callback
+                        and child-run IDs. Configure timeouts on waits and approvals; the model
+                        timeout does not limit human waiting. Put sensitive work behind an Approval
+                        and Condition. End and nested AI Decision nodes cannot be placed inside
+                        action paths.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div *ngSwitchCase="'wait'">
+                    <label class="field"
+                      ><span>Wait time in seconds</span
+                      ><input
+                        type="number"
+                        min="1"
+                        max="31536000"
+                        [(ngModel)]="step.seconds"
+                        (ngModelChange)="markChanged()"
+                    /></label>
+                    <div class="rule-note blue">
+                      <strong>Automatic continuation</strong>
+                      <p>The durable timer survives worker and server restarts.</p>
+                    </div>
+                  </div>
+
+                  <div *ngSwitchCase="'callback'">
+                    <label class="field"
+                      ><span>Callback key</span
+                      ><input
+                        [(ngModel)]="step.callback_key"
+                        (change)="editor.updateStep()"
+                        placeholder="payment.completed" /></label
+                    ><label class="field"
+                      ><span>Waiting message</span
+                      ><textarea
+                        rows="3"
+                        [(ngModel)]="step.prompt"
+                        (ngModelChange)="markChanged()"
+                      ></textarea></label
+                    ><label class="field"
+                      ><span>Timeout in seconds <i>optional</i></span
+                      ><input
+                        type="number"
+                        min="1"
+                        [ngModel]="step.timeout_seconds ?? null"
+                        (ngModelChange)="editor.setOptionalNumber('timeout_seconds', $event)"
+                        placeholder="No timeout" /></label
+                    ><label class="field"
+                      ><span>On timeout</span
+                      ><select [(ngModel)]="step.on_timeout" (ngModelChange)="markChanged()">
+                        <option value="fail">Fail the run</option>
+                        <option value="continue">Continue without data</option>
+                      </select></label
+                    >
+                    <div class="endpoint-preview">
+                      <span>Callback endpoint</span
+                      ><code>POST /api/v1/studio/callbacks/&lt;run-id&gt;/{{ step.id }}</code>
+                    </div>
+                  </div>
+
+                  <div *ngSwitchCase="'signal'">
+                    <label class="field"
+                      ><span>Signal name</span
+                      ><input
+                        [(ngModel)]="step.signal_name"
+                        (change)="editor.updateStep()"
+                        placeholder="documents.ready" /></label
+                    ><label class="field"
+                      ><span>Waiting message</span
+                      ><textarea
+                        rows="3"
+                        [(ngModel)]="step.prompt"
+                        (ngModelChange)="markChanged()"
+                      ></textarea></label
+                    ><label class="field"
+                      ><span>Timeout in seconds <i>optional</i></span
+                      ><input
+                        type="number"
+                        min="1"
+                        [ngModel]="step.timeout_seconds ?? null"
+                        (ngModelChange)="editor.setOptionalNumber('timeout_seconds', $event)"
+                        placeholder="No timeout" /></label
+                    ><label class="field"
+                      ><span>On timeout</span
+                      ><select [(ngModel)]="step.on_timeout" (ngModelChange)="markChanged()">
+                        <option value="fail">Fail the run</option>
+                        <option value="continue">Continue without data</option>
+                      </select></label
+                    >
+                    <div class="endpoint-preview">
+                      <span>Signal endpoint</span
+                      ><code
+                        >POST /api/v1/studio/runs/&lt;run-id&gt;/signals/{{
+                          step.signal_name
+                        }}</code
+                      >
+                    </div>
+                  </div>
+
+                  <div *ngSwitchCase="'approval'">
+                    <label class="field"
+                      ><span>Question for approver</span
+                      ><textarea
+                        rows="3"
+                        [(ngModel)]="step.prompt"
+                        (ngModelChange)="markChanged()"
+                      ></textarea></label
+                    ><label class="field"
+                      ><span>Timeout in seconds <i>optional</i></span
+                      ><input
+                        type="number"
+                        min="1"
+                        [ngModel]="step.timeout_seconds ?? null"
+                        (ngModelChange)="editor.setOptionalNumber('timeout_seconds', $event)"
+                        placeholder="No timeout" /></label
+                    ><label class="field"
+                      ><span>On timeout</span
+                      ><select [(ngModel)]="step.on_timeout" (ngModelChange)="markChanged()">
+                        <option value="reject">Record rejection</option>
+                        <option value="fail">Fail the run</option>
+                      </select></label
+                    >
+                    <div class="rule-note green">
+                      <strong>Recorded human decision</strong>
+                      <p>The decision, comment and person are stored in workflow history.</p>
+                    </div>
+                  </div>
+
+                  <div *ngSwitchCase="'pause'">
+                    <label class="field"
+                      ><span>Operator message</span
+                      ><textarea
+                        rows="3"
+                        [(ngModel)]="step.message"
+                        (ngModelChange)="markChanged()"
+                      ></textarea></label
+                    ><label class="field"
+                      ><span>Maximum pause <i>optional</i></span
+                      ><input
+                        type="number"
+                        min="1"
+                        [ngModel]="step.timeout_seconds ?? null"
+                        (ngModelChange)="editor.setOptionalNumber('timeout_seconds', $event)"
+                        placeholder="No timeout" /></label
+                    ><label class="field"
+                      ><span>On timeout</span
+                      ><select [(ngModel)]="step.on_timeout" (ngModelChange)="markChanged()">
+                        <option value="fail">Fail the run</option>
+                        <option value="resume">Resume automatically</option>
+                      </select></label
+                    >
+                    <div class="rule-note amber">
+                      <strong>Checkpoint rule</strong>
+                      <p>
+                        Resume only affects this active checkpoint. Failed and cancelled runs cannot
+                        resume.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div *ngSwitchCase="'condition'">
+                    <label class="field"
+                      ><span>Value to check</span
+                      ><input
+                        aria-label="Condition value"
+                        [ngModel]="editor.conditionText(step.if?.left)"
+                        (ngModelChange)="editor.setConditionValue(step, 'left', $event)"
+                    /></label>
+                    <label class="field"
+                      ><span>Comparison</span
+                      ><select
+                        aria-label="Condition comparison"
+                        [ngModel]="step.if?.operator || 'equals'"
+                        (ngModelChange)="editor.setConditionOperator(step, $event)"
+                      >
+                        <option value="equals">Equals</option>
+                        <option value="not_equals">Does not equal</option>
+                        <option value="contains">Contains</option>
+                        <option value="exists">Exists</option>
+                        <option value="greater_than">Greater than</option>
+                        <option value="greater_than_or_equal">Greater than or equal</option>
+                        <option value="less_than">Less than</option>
+                        <option value="less_than_or_equal">Less than or equal</option>
+                      </select></label
+                    >
+                    <label class="field" *ngIf="step.if?.operator !== 'exists'"
+                      ><span>Compare with</span
+                      ><input
+                        aria-label="Condition comparison value"
+                        [ngModel]="editor.conditionText(step.if?.right)"
+                        (ngModelChange)="editor.setConditionValue(step, 'right', $event)"
+                    /></label>
+                    <p class="rule-note">
+                      Use input references such as &#36;&#123;input.approved&#125;, text, numbers,
+                      or true/false. Only the matching route runs, then rejoins the main path.
+                    </p>
+                    <button
+                      class="plain-button full"
+                      type="button"
+                      (click)="editor.openNodePicker(step.then!.length, step.then!)"
+                    >
+                      Add node to Yes route
+                    </button>
+                    <button
+                      class="plain-button full"
+                      type="button"
+                      (click)="editor.openNodePicker(step.else!.length, step.else!)"
+                    >
+                      Add node to No route
+                    </button>
+                    <p class="error-text" *ngIf="!step.then?.length">
+                      Add at least one node to the Yes route before testing.
+                    </p>
+                  </div>
+                  <div *ngSwitchCase="'parallel'" class="branch-editor">
+                    <p class="rule-note">
+                      All paths start together. The join waits for every path before continuing. Add
+                      nodes using + on each canvas path, or the controls below.
+                    </p>
+                    <section *ngFor="let branch of step.branches; let i = index">
+                      <label class="field"
+                        ><span>Path ID</span
+                        ><input
+                          [attr.aria-label]="'Parallel path ' + (i + 1) + ' ID'"
+                          [ngModel]="branch.id"
+                          (change)="editor.renameBranch(step, i, $any($event.target).value)"
+                      /></label>
+                      <p class="error-text" *ngIf="!branch.steps.length">
+                        This path needs a node before testing.
+                      </p>
+                      <button
+                        class="plain-button"
+                        type="button"
+                        (click)="editor.openNodePicker(branch.steps.length, branch.steps)"
+                      >
+                        Add node to {{ branch.id }}
+                      </button>
+                      <button
+                        class="danger-link"
+                        type="button"
+                        [disabled]="step.branches!.length <= 2"
+                        (click)="editor.removeBranch(step, i)"
+                      >
+                        Remove path
+                      </button>
+                    </section>
+                    <button
+                      class="plain-button full"
+                      type="button"
+                      [disabled]="step.branches!.length >= 50"
+                      (click)="editor.addParallelBranch(step)"
+                    >
+                      Add parallel path
+                    </button>
+                    <p class="rule-note">
+                      Use 2–50 paths. End belongs after the join, never inside a parallel path.
+                    </p>
+                  </div>
+                </ng-container>
+              </ng-container>
+              <details>
+                <summary>Advanced: output type</summary>
+                <p class="rule-note">
+                  Declare the entire node output as JSON Schema to enable typed suggestions
+                  downstream. The run fails if its output does not match. An empty object removes
+                  validation; undeclared outputs remain unknown.
+                </p>
+                <label class="field"
+                  ><span>Output schema (JSON)</span
+                  ><textarea
+                    class="code"
+                    rows="6"
+                    [ngModel]="editor.schemaText(step)"
+                    (ngModelChange)="editor.setSchema(step, $event)"
+                  ></textarea>
+                </label>
+              </details>
+            </div>
+            <div class="inspector-footer">
+              <button
+                [disabled]="!edit.canEditWorkflow || versions.saving || editor.selectedIndex === 0"
+                type="button"
+                (click)="editor.moveStep(editor.selectedIndex, -1)"
+              >
+                Move earlier</button
+              ><button
+                [disabled]="
+                  !edit.canEditWorkflow ||
+                  versions.saving ||
+                  editor.selectedIndex === editor.selectedSteps.length - 1
+                "
+                type="button"
+                (click)="editor.moveStep(editor.selectedIndex, 1)"
+              >
+                Move later
+              </button>
+            </div>
+            <div class="inspector-footer">
+              <button
+                [disabled]="!edit.canEditWorkflow || versions.saving"
+                type="button"
+                (click)="editor.duplicateStep(editor.selectedIndex, editor.selectedSteps)"
+              >
+                ⧉ Duplicate</button
+              ><button
+                [disabled]="!edit.canEditWorkflow || versions.saving"
+                class="danger-link"
+                type="button"
+                (click)="editor.removeStep(editor.selectedIndex, editor.selectedSteps)"
+              >
+                Delete node
+              </button>
+            </div>
+          </ng-container>
+
+          <ng-template #triggerSettings>
+            <div class="inspector-head">
+              <div class="inspector-title">
+                <span class="node-icon trigger">⚡</span
+                ><span><small>TRIGGER</small><strong>Start workflow</strong></span>
+              </div>
+              <button
+                class="square-button"
+                aria-label="Close node settings"
+                type="button"
+                (click)="editor.inspectorOpen = false"
+              >
+                <runloom-icon name="close" />
+              </button>
+            </div>
+            <div class="inspector-tabs">
+              <button class="active" type="button">Parameters</button
+              ><button type="button" (click)="openJson()">JSON</button>
+            </div>
+            <div class="inspector-body">
+              <label class="field"
+                ><span>Workflow kind</span
+                ><select
+                  aria-label="Workflow kind"
+                  [ngModel]="definition.kind || 'main'"
+                  (ngModelChange)="editor.setWorkflowKind($event)"
+                >
+                  <option value="main">Main workflow</option>
+                  <option value="child">Child — parent calls only</option>
+                </select></label
+              >
+              <div class="rule-note violet" *ngIf="definition.kind === 'child'">
+                <strong>Parent-only production execution</strong>
+                <p>
+                  Normal API, webhook and schedule starts are blocked. Test the draft independently
+                  here in Studio without publishing. Publish it when a parent needs to call it.
+                  Tests execute real activities and appear in run history as tests. Callbacks,
+                  signals and resumes remain available.
+                </p>
+              </div>
+              <label class="field" *ngIf="definition.kind !== 'child'"
+                ><span>Start when</span
+                ><select
+                  [ngModel]="definition.trigger.type"
+                  (ngModelChange)="editor.setTriggerType($event)"
+                >
+                  <option value="manual">I click Test workflow</option>
+                  <option value="webhook">A webhook is received</option>
+                </select></label
+              >
+              <ng-container *ngIf="definition.trigger.type === 'webhook'">
+                <label class="field"
+                  ><span>Webhook path</span>
+                  <div class="input-prefix">
+                    <b>/</b
+                    ><input
+                      [(ngModel)]="definition.trigger.path"
+                      (ngModelChange)="markChanged()"
+                    /></div></label
+                ><label class="field"
+                  ><span>Method</span
+                  ><select [(ngModel)]="definition.trigger.method" (ngModelChange)="markChanged()">
+                    <option value="POST">POST</option>
+                  </select></label
+                >
+                <div class="endpoint-preview">
+                  <span>Production URL</span><code>{{ webhookUrl }}</code
+                  ><button type="button" (click)="editor.copyWebhookUrl()">Copy</button>
+                </div>
+                <div class="rule-note orange">
+                  <strong>Published versions only</strong>
+                  <p>
+                    The webhook always starts the latest published version. Its JSON request body
+                    becomes workflow input.
+                  </p>
+                </div>
+              </ng-container>
+              <ng-container
+                *ngIf="definition.kind !== 'child' && definition.trigger.type === 'manual'"
+                ><div class="rule-note blue">
+                  <strong>Main workflow</strong>
+                  <p>
+                    Test the current draft in Studio. API and scheduled starts use published
+                    versions.
+                  </p>
+                  <button class="plain-button" type="button" (click)="openSchedules()">
+                    Manage schedules
+                  </button>
+                </div></ng-container
+              >
+              <hr />
+              <label class="field"
+                ><span>Workflow ID</span
+                ><input
+                  [readonly]="!isNewWorkflow || edit.ownsEdit"
+                  [(ngModel)]="definition.id"
+                  (change)="editor.updateMetadata()" /></label
+              ><label class="field"
+                ><span>Description</span
+                ><textarea
+                  rows="4"
+                  [(ngModel)]="definition.description"
+                  (ngModelChange)="markChanged()"
+                ></textarea>
+              </label>
+              <details>
+                <summary>Input types and validation</summary>
+                <p class="rule-note">
+                  Describe workflow input fields using JSON Schema. These types drive prompt
+                  variable suggestions and validate every run’s inputs.
+                </p>
+                <label class="field"
+                  ><span>Input schema (JSON)</span
+                  ><textarea
+                    class="code"
+                    rows="8"
+                    [ngModel]="editor.schemaText(definition)"
+                    (ngModelChange)="editor.setSchema(definition, $event)"
+                  ></textarea>
+                </label>
+              </details>
+            </div>
+          </ng-template>
+        </fieldset>
+      </aside>
+
+      <button
+        class="open-inspector"
+        type="button"
+        *ngIf="!editor.inspectorOpen && !editor.nodePickerOpen"
+        (click)="editor.selectTrigger()"
+      >
+        Edit workflow ›
+      </button>
+    </div>
+  </div>
+
+  <div
+    class="drawer-backdrop"
+    *ngIf="versions.versionOpen"
+    (click)="versions.versionOpen = false"
+  ></div>
+  <aside class="run-drawer version-drawer" [class.open]="versions.versionOpen">
+    <div class="drawer-head">
+      <div>
+        <span class="eyebrow">Workflow source control</span>
+        <h2>Versions and commits</h2>
+      </div>
+      <button
+        class="square-button"
+        aria-label="Close version history"
+        type="button"
+        (click)="versions.versionOpen = false"
+      >
+        <runloom-icon name="close" />
+      </button>
+    </div>
+    <div class="drawer-body">
+      <runloom-notice
+        *ngIf="message && versions.versionOpen && !testRun.runOpen && !jsonOpen"
+        [message]="message"
+        [tone]="messageError ? 'error' : 'success'"
+        dismissLabel="Dismiss message"
+        (dismissed)="message = ''"
+      />
+      <div class="trigger-summary">
+        <span>⌁</span>
+        <p>
+          <strong>Safe workflow history</strong
+          ><small
+            >Saving creates a draft commit. Publishing creates an immutable numbered version.
+            Restoring always creates another draft commit.</small
+          >
+        </p>
+      </div>
+      <label class="field"
+        ><span>Commit message</span
+        ><input
+          maxlength="500"
+          [(ngModel)]="versions.commitMessage"
+          placeholder="Describe what changed"
+      /></label>
+      <div class="version-actions">
+        <button
+          class="plain-button"
+          type="button"
+          [disabled]="versions.saving || !edit.canEditWorkflow"
+          (click)="versions.save()"
+        >
+          Commit draft</button
+        ><button
+          [disabled]="!edit.canEditWorkflow || versions.saving"
+          class="publish-button"
+          type="button"
+          (click)="versions.publish()"
+        >
+          Commit and publish
+        </button>
+      </div>
+
+      <section
+        class="published-strip"
+        *ngIf="versions.definitionHistory?.published_versions?.length"
+      >
+        <div class="history-heading">
+          <span
+            ><strong>Published releases</strong
+            ><small>Immutable versions available to run</small></span
+          ><b>{{ versions.definitionHistory?.published_versions?.length }}</b>
+        </div>
+        <div>
+          <button
+            type="button"
+            *ngFor="let version of versions.definitionHistory?.published_versions"
+            (click)="versions.openPublishedVersion(version)"
+          >
+            v{{ version }}
+          </button>
+        </div>
+      </section>
+
+      <section class="commit-timeline" *ngIf="versions.definitionHistory as history">
+        <div class="history-heading">
+          <span><strong>Commit history</strong><small>Newest first</small></span
+          ><b>{{ history.commits.length }}</b>
+        </div>
+        <article class="commit-row" *ngFor="let commit of history.commits">
+          <span class="commit-marker" [attr.data-kind]="commit.kind">{{
+            commit.kind === 'publish' ? '✓' : commit.kind === 'restore' ? '↶' : '•'
+          }}</span>
+          <div>
+            <strong>{{ commit.message }}</strong
+            ><small>#{{ commit.sequence }} · {{ versions.commitKindLabel(commit) }}</small
+            ><small>{{ commit.actor }} · {{ commit.created_at | date: 'medium' }}</small>
+          </div>
+          <button
+            type="button"
+            [disabled]="!edit.canEditWorkflow || !edit.ownsEdit || versions.saving"
+            (click)="versions.restoreCommit(commit)"
+          >
+            Restore
+          </button>
+        </article>
+        <p class="empty-copy" *ngIf="history.commits.length === 0">
+          Save this workflow to create its first commit.
+        </p>
+      </section>
+    </div>
+  </aside>
+
+  <div class="drawer-backdrop" *ngIf="testRun.runOpen" (click)="testRun.runOpen = false"></div>
+  <aside class="run-drawer" [class.open]="testRun.runOpen">
+    <div class="drawer-head">
+      <div>
+        <span class="eyebrow">Live execution</span>
+        <h2>{{ definition.kind === 'child' ? 'Test child workflow' : 'Test workflow' }}</h2>
+      </div>
+      <button
+        class="square-button"
+        type="button"
+        aria-label="Close test panel"
+        (click)="testRun.runOpen = false"
+      >
+        <runloom-icon name="close" />
+      </button>
+    </div>
+    <div class="drawer-body">
+      <runloom-notice
+        *ngIf="message && testRun.runOpen && !jsonOpen"
+        [message]="message"
+        [tone]="messageError ? 'error' : 'success'"
+        dismissLabel="Dismiss message"
+        (dismissed)="message = ''"
+      />
+      <div class="trigger-summary" *ngIf="definition.kind !== 'child'">
+        <span>{{ definition.trigger.type === 'webhook' ? '⚡' : '▶' }}</span>
+        <p>
+          <strong>{{
+            definition.trigger.type === 'webhook' ? 'Webhook test' : 'Manual test'
+          }}</strong
+          ><small
+            >Tests the current builder snapshot without publishing. Webhook delivery itself is not
+            tested.</small
+          >
+        </p>
+      </div>
+      <button class="plain-button" type="button" (click)="openRunDashboard()">
+        View all runs in Management
+      </button>
+      <div class="publish-warning">
+        <span>i</span>
+        <p>
+          <strong>No publishing needed</strong
+          ><small
+            >Tests use a snapshot of your current draft, including unsaved builder edits. Later
+            edits do not change a running test. Save a brand-new workflow once first. Tests make
+            real API calls, send emails and incur LLM costs.</small
+          >
+        </p>
+      </div>
+      <p class="publish-warning" *ngIf="definition.kind === 'child'">
+        Independent child test: uses the current draft and runs real activities, including external
+        side effects. Normal API, webhook and schedule starts remain blocked.
+      </p>
+      <label class="field"
+        ><span>Test input</span
+        ><textarea
+          aria-label="Test input"
+          class="code"
+          rows="8"
+          [(ngModel)]="testRun.runInput"
+        ></textarea></label
+      ><button
+        class="test-button full"
+        type="button"
+        [disabled]="
+          !auth.canEdit() || testRun.startingTest || (!!testRun.run && !testRun.runFinished)
+        "
+        (click)="testRun.startRun()"
+      >
+        <runloom-icon name="play" /> Start new test
+      </button>
+      <section class="run-card" *ngIf="testRun.run">
+        <p
+          class="rule-note violet"
+          *ngIf="
+            testRun.runState?.is_test ||
+            testRun.runHistory?.run?.trigger_type === 'child_test' ||
+            testRun.runHistory?.run?.trigger_type === 'draft_test'
+          "
+        >
+          Test execution — real activities and side effects.
+        </p>
+        <div class="run-card-head">
+          <span
+            class="status-dot"
+            [attr.data-status]="testRun.runState?.status || testRun.run.temporal_status"
+          ></span>
+          <div>
+            <small>Current status</small
+            ><strong>{{
+              (testRun.runState?.status || testRun.run.temporal_status).replace('_', ' ')
+            }}</strong>
+          </div>
+        </div>
+        <code>{{ testRun.run.workflow_id }}</code>
+        <p class="current-step" *ngIf="testRun.runState?.current_step">
+          Now at <strong>{{ testRun.runState?.current_step?.name }}</strong>
+        </p>
+        <div class="related-runs">
+          <button
+            class="plain-button"
+            type="button"
+            *ngIf="testRun.runState?.parent_workflow_id as parent"
+            (click)="testRun.openRelatedRun(parent)"
+          >
+            ↰ Open parent run
+          </button>
+          <button
+            class="plain-button"
+            type="button"
+            *ngFor="let child of testRun.runState?.child_workflows | keyvalue"
+            (click)="testRun.openRelatedRun(child.value)"
+          >
+            ↳ Open child: {{ child.key }}
+          </button>
+          <small *ngIf="testRun.runState?.schedule_id"
+            >Started by schedule {{ testRun.runState?.schedule_id }}</small
+          >
+        </div>
+        <div class="gate-card approval" *ngIf="testRun.activeApproval as gate">
+          <span class="gate-label">Human approval needed</span>
+          <h3>{{ gate.prompt }}</h3>
+          <label class="field"
+            ><span>Comment</span
+            ><input [(ngModel)]="testRun.approvalComment" placeholder="Optional note"
+          /></label>
+          <div class="two-buttons">
+            <button
+              class="danger-button"
+              type="button"
+              [disabled]="!auth.canEdit()"
+              (click)="testRun.decide(false)"
+            >
+              Reject</button
+            ><button
+              class="test-button"
+              type="button"
+              [disabled]="!auth.canEdit()"
+              (click)="testRun.decide(true)"
+            >
+              Approve
+            </button>
+          </div>
+        </div>
+        <div class="gate-card callback" *ngIf="testRun.activeCallback as gate">
+          <span class="gate-label">External callback expected</span>
+          <h3>{{ gate.prompt }}</h3>
+          <p>
+            Key: <code>{{ gate.callback_key }}</code>
+          </p>
+          <label class="field"
+            ><span>Test callback data</span
+            ><textarea
+              class="code"
+              rows="5"
+              [(ngModel)]="testRun.callbackPayload"
+            ></textarea></label
+          ><button
+            class="test-button full"
+            type="button"
+            [disabled]="!auth.canEdit()"
+            (click)="testRun.sendCallback()"
+          >
+            Simulate callback
+          </button>
+        </div>
+        <div class="gate-card signal" *ngFor="let handler of testRun.signalHandlers">
+          <span class="gate-label">Independent signal handler</span>
+          <h3>{{ handler.signal_name }}</h3>
+          <p>
+            {{ handler.status }} · {{ handler.received }} received ·
+            {{ handler.completed }} completed · {{ handler.pending }} queued
+          </p>
+          <p *ngIf="handler.error" role="alert">{{ handler.error }}</p>
+          <label class="field"
+            ><span>Event payload (JSON)</span
+            ><textarea
+              class="code"
+              rows="4"
+              [ngModel]="testRun.handlerPayloads[handler.signal_name] || '{}'"
+              (ngModelChange)="testRun.handlerPayloads[handler.signal_name] = $event"
+            ></textarea></label
+          ><button
+            class="test-button full"
+            type="button"
+            [disabled]="
+              !auth.canEdit() ||
+              testRun.runFinished ||
+              !handler.accepting ||
+              testRun.handlerSending.has(handler.signal_name)
+            "
+            (click)="testRun.sendHandlerSignal(handler.signal_name)"
+          >
+            Send handler event</button
+          ><small
+            >Accepted means received, not completed. Retrying the same payload after an error reuses
+            its event ID.</small
+          >
+        </div>
+        <div class="gate-card signal" *ngIf="testRun.activeSignal as gate">
+          <span class="gate-label">Named signal expected</span>
+          <h3>{{ gate.prompt }}</h3>
+          <p>
+            Signal: <code>{{ gate.signal_name }}</code>
+          </p>
+          <label class="field"
+            ><span>Test signal data</span
+            ><textarea class="code" rows="5" [(ngModel)]="testRun.signalPayload"></textarea></label
+          ><button
+            class="test-button full"
+            type="button"
+            [disabled]="!auth.canEdit()"
+            (click)="testRun.sendSignal()"
+          >
+            Send signal
+          </button>
+        </div>
+        <div class="gate-card pause" *ngIf="testRun.activePause as gate">
+          <span class="gate-label">{{
+            gate.budget ? 'LLM budget pause' : 'Operator checkpoint'
+          }}</span>
+          <h3>{{ gate.message }}</h3>
+          <ng-container *ngIf="gate.budget as budget"
+            ><p>This workflow is paused, not canceled or completed. Its progress is retained.</p>
+            <p *ngIf="budget.resets_at">
+              Monthly allowance resets {{ budget.resets_at | date: 'medium' : 'UTC' }} UTC.
+            </p>
+            <p *ngIf="budget.incomplete">
+              Accounting is incomplete. Recorded spend is a known subtotal, not the full provider
+              bill.
+            </p>
+            <p>
+              Ask an admin to adjust the policy, or wait for its monthly reset, then recheck. Resume
+              cannot override a hard limit.
+            </p></ng-container
+          ><label class="field" *ngIf="!gate.budget"
+            ><span>Resume data <i>optional</i></span
+            ><textarea class="code" rows="4" [(ngModel)]="testRun.resumePayload"></textarea></label
+          ><button
+            class="test-button full"
+            type="button"
+            [disabled]="!auth.canEdit()"
+            (click)="testRun.resume()"
+          >
+            {{ gate.budget ? 'Recheck budget & resume' : 'Resume workflow' }}
+          </button>
+        </div>
+        <div class="result-card" *ngIf="testRun.runFinished">
+          <strong>Run finished</strong>
+          <pre>{{ testRun.runState?.output | json }}</pre>
+          <p class="error-text" *ngIf="testRun.runState?.error">{{ testRun.runState?.error }}</p>
+        </div>
+        <button
+          class="cancel-link"
+          type="button"
+          *ngIf="!testRun.runFinished"
+          [disabled]="!auth.canEdit()"
+          (click)="testRun.cancelRun()"
+        >
+          Cancel run permanently
+        </button>
+
+        <runloom-run-costs
+          [workflowId]="testRun.run.workflow_id"
+          [running]="!testRun.runFinished"
+        />
+        <section class="audit-panel" *ngIf="testRun.runHistory as history">
+          <div class="history-heading">
+            <span
+              ><strong>Stored input and audit</strong><small>Application audit history</small></span
+            ><b>{{ history.events.length }}</b>
+          </div>
+          <details>
+            <summary>Original input</summary>
+            <pre>{{ history.run.input | json }}</pre>
+          </details>
+          <div class="audit-event" *ngFor="let event of history.events">
+            <span></span>
+            <p>
+              <strong>{{ testRun.eventLabel(event.event_type) }}</strong
+              ><small>{{ event.actor }} · {{ event.created_at | date: 'medium' }}</small
+              ><code *ngIf="event.step_id">{{ event.step_id }}</code>
+            </p>
+          </div>
+        </section>
+      </section>
+    </div>
+  </aside>
+
+  <div class="modal-backdrop" *ngIf="jsonOpen">
+    <section class="json-modal">
+      <div class="drawer-head">
+        <div>
+          <span class="eyebrow">Advanced editor</span>
+          <h2>Workflow JSON</h2>
+        </div>
+        <button
+          class="square-button"
+          type="button"
+          aria-label="Close JSON editor"
+          (click)="closeJson()"
+        >
+          <runloom-icon name="close" />
+        </button>
+      </div>
+      <div class="json-guidance">
+        <p>
+          Changes here update the visual builder and are validated before the Go runtime executes
+          them.
+        </p>
+        <runloom-notice
+          *ngIf="message"
+          [message]="message"
+          [tone]="messageError ? 'error' : 'success'"
+          dismissLabel="Dismiss message"
+          (dismissed)="message = ''"
+        />
+      </div>
+      <textarea
+        class="code"
+        aria-label="Workflow JSON"
+        [readOnly]="!edit.canEditWorkflow"
+        [(ngModel)]="jsonDraft"
+      ></textarea>
+      <div class="modal-actions">
+        <button class="plain-button" type="button" (click)="closeJson()">Cancel</button
+        ><button
+          [disabled]="!edit.canEditWorkflow || versions.saving"
+          class="publish-button"
+          type="button"
+          (click)="applyJson()"
+        >
+          Apply to builder
+        </button>
+      </div>
+    </section>
+  </div>
+}
+
+<dialog
+  #shortcuts
+  class="shortcuts-dialog"
+  aria-labelledby="shortcuts-title"
+  aria-describedby="shortcuts-description"
+>
+  <h2 id="shortcuts-title">Keyboard shortcuts</h2>
+  <p id="shortcuts-description">Use Command (⌘) on macOS and Ctrl on Windows or Linux.</p>
+  <table>
+    <caption>
+      Workflow builder shortcuts
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Action</th>
+        <th scope="col">Windows / Linux</th>
+        <th scope="col">macOS</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">Undo workflow edit</th>
+        <td>Ctrl + Z</td>
+        <td>⌘ Z</td>
+      </tr>
+      <tr>
+        <th scope="row">Redo workflow edit</th>
+        <td>Ctrl + Shift + Z</td>
+        <td>⌘ Shift Z</td>
+      </tr>
+      <tr>
+        <th scope="row">Save draft now</th>
+        <td>Ctrl + S</td>
+        <td>⌘ S</td>
+      </tr>
+      <tr>
+        <th scope="row">Pan canvas</th>
+        <td colspan="2">Space + drag, or middle-button drag</td>
+      </tr>
+      <tr>
+        <th scope="row">Zoom canvas</th>
+        <td>Ctrl + wheel</td>
+        <td>⌘ + wheel</td>
+      </tr>
+      <tr>
+        <th scope="row">Move focused node</th>
+        <td colspan="2">Alt + arrow keys; add Shift for a larger move</td>
+      </tr>
+      <tr>
+        <th scope="row">Cancel drag / close this guide</th>
+        <td colspan="2">Escape</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>
+    In text fields and code editors, undo and redo apply to the text. Workflow history covers the
+    last 100 edits in this editing session and resets when a workflow is loaded or first saved.
+  </p>
+  <p>
+    After the first save, drafts autosave one second after editing pauses. Autosaves create draft
+    commits in History; publishing remains a separate action. Unapplied or invalid JSON stays local
+    until fixed.
+  </p>
+  <form method="dialog"><button class="plain-button" autofocus>Close</button></form>
+</dialog>

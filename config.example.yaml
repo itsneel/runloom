@@ -1,0 +1,45 @@
+# Native development example. Set RUNLOOM_CONFIG_FILE to your copy's absolute path.
+# Helm generates equivalent files in its ConfigMap; Compose mounts configs too.
+# Secret values do not belong here. Supply absolute paths to private credential files.
+TEMPORAL_ADDRESS: localhost:7233
+TEMPORAL_NAMESPACE: default
+# Workflows/worker only: execution namespaces append each organization UUID.
+# TEMPORAL_NAMESPACE_PREFIX: runloom-local
+# TEMPORAL_RETENTION_DAYS: "30"
+RUNLOOM_TASK_QUEUE: runloom
+RUNLOOM_API_ADDRESS: 127.0.0.1:8080
+RUNLOOM_WORKER_HEALTH_ADDRESS: 127.0.0.1:8081
+# Optional: requires a collector in the same network namespace. See docs/observability.md.
+# RUNLOOM_TELEMETRY_ENDPOINT: http://127.0.0.1:4318
+RUNLOOM_DATABASE_DRIVER: file
+RUNLOOM_DATABASE_NAME: runloom
+RUNLOOM_DATA_DIR: var/runloom/definitions
+# PostgreSQL/MongoDB: change the driver and supply the connection-string file.
+# RUNLOOM_DATABASE_URL_FILE: /absolute/private/database-url
+RUNLOOM_OIDC_URL: /auth
+RUNLOOM_OIDC_ISSUER: http://localhost:4200/auth/realms/runloom
+RUNLOOM_OIDC_JWKS_URL: http://localhost:18081/auth/realms/runloom/protocol/openid-connect/certs
+RUNLOOM_OIDC_CLIENT_ID: runloom
+RUNLOOM_OIDC_REALM: runloom
+# Configure a real Keycloak authentication flow and signed access-token claims
+# before requiring an ACR or authentication freshness. Local defaults stay off.
+RUNLOOM_OIDC_REQUIRED_ACR: ""
+RUNLOOM_OIDC_MAX_AUTH_AGE: ""
+RUNLOOM_SENSITIVE_RUN_ROLES: admin
+RUNLOOM_GOOGLE_LOGIN_ENABLED: false
+RUNLOOM_EXECUTION_AUDIENCE: runloom-execution
+RUNLOOM_LLM_BASE_URL: https://api.openai.com/v1
+RUNLOOM_LLM_PROVIDER: openai-compatible
+# RUNLOOM_LLM_DEFAULT_MODEL: your-model
+# RUNLOOM_LLM_API_KEY_FILE: /absolute/private/llm-api-key
+# RUNLOOM_SECRETS_KEY_FILE: /absolute/private/workflow-encryption-key
+# Workflows/worker only: optional rotation keyring; retained old keys decrypt history.
+# RUNLOOM_PAYLOAD_KEYRING_FILE: /absolute/private/execution-keyring.json
+# RUNLOOM_ALLOW_LEGACY_PAYLOADS: "true" # migration only, never rewrites old records
+# TEMPORAL_TLS_ENABLED: "true"
+# TEMPORAL_TLS_CA_FILE: /absolute/private/temporal-ca.pem
+# TEMPORAL_TLS_CERT_FILE: /absolute/private/temporal-client.pem
+# TEMPORAL_TLS_KEY_FILE: /absolute/private/temporal-client-key.pem
+# RUNLOOM_KEYCLOAK_ADMIN_URL: http://localhost:18081/auth
+# RUNLOOM_KEYCLOAK_PROVISIONER_CLIENT_ID: runloom-provisioner
+# RUNLOOM_KEYCLOAK_PROVISIONER_SECRET_FILE: /absolute/private/provisioner-secret

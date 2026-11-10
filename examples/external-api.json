@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0",
+  "id": "external-api-example",
+  "name": "Call an API and finish",
+  "description": "Replace api.example.com and provision a team secret before running.",
+  "kind": "main",
+  "version": 0,
+  "trigger": { "type": "manual" },
+  "input_schema": { "type": "object", "required": ["order_id"], "properties": { "order_id": { "type": "string" } } },
+  "steps": [
+    {
+      "id": "call-api", "name": "Create order", "type": "http",
+      "http": {
+        "url": "https://api.example.com/orders", "method": "POST",
+        "secret_headers": { "Authorization": { "secret": "billing-api", "prefix": "Bearer " } },
+        "body": { "order_id": "${input.order_id}" }
+      },
+      "timeout_seconds": 30, "retry": { "maximum_attempts": 1 }
+    },
+    { "id": "done", "name": "End workflow", "type": "end", "message": "Workflow will end now", "with": { "response": "${steps.call-api.output.body}" } }
+  ]
+}

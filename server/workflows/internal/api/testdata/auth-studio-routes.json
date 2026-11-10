@@ -1,0 +1,19 @@
+[
+  "delete /orgs/{org}/members/{email}",
+  "delete /orgs/{org}/teams/{team}/members/{email}",
+  "get /me",
+  "get /orgs/creation",
+  "get /orgs/{org}/audit",
+  "get /orgs/{org}/hierarchy",
+  "get /orgs/{org}/members",
+  "get /orgs/{org}/teams/{team}/members",
+  "get /orgs/{org}/teams/{team}/service-accounts",
+  "patch /orgs/{org}",
+  "post /orgs",
+  "post /orgs/{org}/members",
+  "post /orgs/{org}/teams",
+  "post /orgs/{org}/teams/{team}/members",
+  "post /orgs/{org}/teams/{team}/service-accounts",
+  "post /orgs/{org}/teams/{team}/service-accounts/{account}/{action}",
+  "put /orgs/{org}/teams/{team}/service-accounts/{account}"
+]

@@ -1,0 +1,38 @@
+{
+  "name": "runloom-website",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": "26.13.0"
+  },
+  "scripts": {
+    "start": "ng serve --host 127.0.0.1 --port 4300",
+    "build": "ng build",
+    "watch": "ng build --watch --configuration development",
+    "preview": "node scripts/preview.mjs",
+    "test": "node --experimental-strip-types --test tests/*.test.mjs",
+    "test:e2e": "npm run build && playwright test",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,mjs,cjs,html,scss,css,json}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,mjs,cjs,html,scss,css,json}\""
+  },
+  "dependencies": {
+    "@angular/common": "22.1.5",
+    "@angular/compiler": "22.1.5",
+    "@angular/core": "22.1.5",
+    "@angular/platform-browser": "22.1.5",
+    "rxjs": "~7.8.0",
+    "tslib": "^2.3.0"
+  },
+  "devDependencies": {
+    "@angular/build": "22.1.7",
+    "@angular/cli": "22.1.7",
+    "@angular/compiler-cli": "22.1.5",
+    "@axe-core/playwright": "4.13.0",
+    "@playwright/test": "1.63.0",
+    "typescript": "~6.0.2",
+    "prettier": "3.9.9"
+  },
+  "packageManager": "npm@11.20.0"
+}

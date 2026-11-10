@@ -1,0 +1,53 @@
+{
+  "name": "runloom-docs",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": "26.13.0"
+  },
+  "scripts": {
+    "content": "node scripts/build-content.mjs",
+    "sync": "node scripts/sync-content.mjs",
+    "sync:check": "node scripts/sync-content.mjs --check",
+    "start": "npm run content && ng serve --host 127.0.0.1 --port 4400",
+    "build": "npm run content && ng build",
+    "preview": "serve dist/runloom-docs/browser -l tcp://127.0.0.1:4400",
+    "test": "npm run content && node --experimental-strip-types --test tests/*.test.mjs",
+    "test:e2e": "npm run build && playwright test",
+    "format": "prettier --write \"**/*.{ts,js,mjs,html,scss,css,json}\"",
+    "format:check": "prettier --check \"**/*.{ts,js,mjs,html,scss,css,json}\""
+  },
+  "dependencies": {
+    "@angular/common": "22.2.3",
+    "@angular/compiler": "22.2.3",
+    "@angular/core": "22.2.3",
+    "@angular/platform-browser": "22.2.3",
+    "@angular/platform-server": "22.2.3",
+    "@angular/router": "22.2.3",
+    "@angular/ssr": "22.2.3",
+    "minisearch": "7.2.0",
+    "rxjs": "~7.8.0",
+    "tslib": "^2.3.0"
+  },
+  "devDependencies": {
+    "@angular/build": "22.2.3",
+    "@angular/cli": "22.2.3",
+    "@angular/compiler-cli": "22.2.3",
+    "@axe-core/playwright": "4.13.0",
+    "@playwright/test": "1.63.0",
+    "marked": "18.1.1",
+    "github-slugger": "2.0.0",
+    "sanitize-html": "2.18.1",
+    "swagger-ui-dist": "5.33.1",
+    "serve": "14.2.6",
+    "typescript": "~6.0.2",
+    "prettier": "3.9.9"
+  },
+  "overrides": {
+    "compression": "1.8.2",
+    "vite": "8.3.3"
+  },
+  "packageManager": "npm@11.20.0"
+}

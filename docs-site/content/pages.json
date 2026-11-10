@@ -1,0 +1,231 @@
+[
+  {
+    "slug": "getting-started/overview",
+    "title": "What is Runloom?",
+    "description": "A visual workspace for reliable, versioned workflows.",
+    "group": "Get started",
+    "file": "overview.md"
+  },
+  {
+    "slug": "getting-started/docker-compose",
+    "title": "Docker Compose",
+    "description": "Start a local installation with MongoDB or PostgreSQL.",
+    "group": "Get started",
+    "file": "docker-compose.md"
+  },
+  {
+    "slug": "getting-started/kubernetes",
+    "title": "Kubernetes",
+    "description": "Run the platform in a local Kind cluster.",
+    "group": "Get started",
+    "file": "kubernetes.md"
+  },
+  {
+    "slug": "guides/first-workflow",
+    "title": "Your first workflow",
+    "description": "Create a project, save a draft and test without publishing.",
+    "group": "Get started",
+    "file": "first-workflow.md"
+  },
+  {
+    "slug": "guides/projects",
+    "title": "Projects & workflows",
+    "description": "Organize authoring work without changing execution permissions.",
+    "group": "Build",
+    "summary": "summaries/projects.md",
+    "source": "docs/projects.md"
+  },
+  {
+    "slug": "guides/workflow-builder",
+    "title": "Workflow builder",
+    "description": "Collaborate safely with editing leases and draft protection.",
+    "group": "Build",
+    "summary": "summaries/workflow-editing.md",
+    "source": "docs/workflow-editing.md"
+  },
+  {
+    "slug": "nodes/reference",
+    "title": "Node reference",
+    "description": "Node configuration, expressions and the workflow JSON contract.",
+    "group": "Build",
+    "summary": "summaries/json-contract.md",
+    "source": "docs/json-contract.md"
+  },
+  {
+    "slug": "guides/versioning",
+    "title": "Versions & publishing",
+    "description": "Draft commits, immutable releases and restoring earlier work.",
+    "group": "Build",
+    "summary": "summaries/versioning.md",
+    "source": "docs/versioning.md"
+  },
+  {
+    "slug": "guides/schedules-and-subworkflows",
+    "title": "Schedules & subworkflows",
+    "description": "Schedule published workflows and compose reusable children.",
+    "group": "Build",
+    "summary": "summaries/schedules-and-subworkflows.md",
+    "source": "docs/schedules-and-subworkflows.md"
+  },
+  {
+    "slug": "guides/lumi",
+    "title": "Lumi assistant",
+    "description": "Configure chat, review authoring proposals and understand guardrails.",
+    "group": "Build",
+    "summary": "summaries/assistant.md",
+    "source": "docs/assistant.md"
+  },
+  {
+    "slug": "integrations/connections",
+    "title": "Database connections",
+    "description": "Connect MongoDB, PostgreSQL, MySQL and Supabase.",
+    "group": "Connect",
+    "summary": "summaries/database-connections.md",
+    "source": "docs/database-connections.md"
+  },
+  {
+    "slug": "integrations/secrets",
+    "title": "External APIs & secrets",
+    "description": "Call external services without putting credentials in definitions.",
+    "group": "Connect",
+    "summary": "summaries/api-nodes-and-secrets.md",
+    "source": "docs/api-nodes-and-secrets.md"
+  },
+  {
+    "slug": "nodes/email",
+    "title": "Email",
+    "description": "Send email through operator-configured SMTP.",
+    "group": "Connect",
+    "summary": "summaries/email-node.md",
+    "source": "docs/email-node.md"
+  },
+  {
+    "slug": "nodes/javascript",
+    "title": "JavaScript",
+    "description": "Transform data in the isolated Custom Code node.",
+    "group": "Connect",
+    "summary": "summaries/custom-code.md",
+    "source": "docs/custom-code.md"
+  },
+  {
+    "slug": "management/access",
+    "title": "Teams & access",
+    "description": "Understand identity, organizations, team roles and authorization.",
+    "group": "Manage",
+    "summary": "summaries/authentication.md",
+    "source": "docs/authentication.md"
+  },
+  {
+    "slug": "management/costs",
+    "title": "LLM costs & budgets",
+    "description": "Understand reported usage, estimated cost and project budget policies.",
+    "group": "Manage",
+    "summary": "summaries/llm-costs.md",
+    "source": "docs/llm-costs.md"
+  },
+  {
+    "slug": "management/platform",
+    "title": "Platform administration",
+    "description": "Restricted staff access, health checks and platform administration.",
+    "group": "Manage",
+    "summary": "summaries/platform-administration.md",
+    "source": "docs/platform-administration.md"
+  },
+  {
+    "slug": "api/overview",
+    "title": "API overview",
+    "description": "Choose the correct interface and credential type.",
+    "group": "API reference",
+    "summary": "summaries/api.md",
+    "source": "docs/api.md"
+  },
+  {
+    "slug": "api/consumer",
+    "title": "Consumer API",
+    "description": "Machine-authorized workflow listing, starts, status and cancellation.",
+    "group": "API reference",
+    "summary": "summaries/consumer-api.md",
+    "source": "docs/consumer-api.md",
+    "api": "consumer"
+  },
+  {
+    "slug": "api/studio",
+    "title": "Studio API",
+    "description": "Human-authorized authoring, management and run operations.",
+    "group": "API reference",
+    "summary": "summaries/studio-api.md",
+    "source": "docs/studio-api.md",
+    "api": "studio"
+  },
+  {
+    "slug": "api/platform",
+    "title": "Platform API",
+    "description": "Platform identity, health, staff and audit endpoints.",
+    "group": "API reference",
+    "file": "platform-api.md",
+    "api": "platform"
+  },
+  {
+    "slug": "guides/run-lifecycle",
+    "title": "Run lifecycle",
+    "description": "Starting, inspecting, resuming and canceling runs through Studio APIs.",
+    "group": "Operate",
+    "summary": "summaries/workflow-api.md",
+    "source": "docs/workflow-api.md"
+  },
+  {
+    "slug": "deployment/helm",
+    "title": "Deployment & Helm",
+    "description": "Configuration, infrastructure, health probes and upgrades.",
+    "group": "Operate",
+    "summary": "summaries/deployment.md",
+    "source": "docs/deployment.md"
+  },
+  {
+    "slug": "deployment/local-setup",
+    "title": "Local setup reference",
+    "description": "Accounts, private configuration, ports and repeatable local startup.",
+    "group": "Operate",
+    "summary": "summaries/local-development.md",
+    "source": "docs/local-development.md"
+  },
+  {
+    "slug": "deployment/services",
+    "title": "Service architecture",
+    "description": "Independent services, database ownership and internal contracts.",
+    "group": "Operate",
+    "summary": "summaries/service-split.md",
+    "source": "docs/service-split.md"
+  },
+  {
+    "slug": "deployment/databases",
+    "title": "Application databases",
+    "description": "Persistence, data ownership and operational considerations.",
+    "group": "Operate",
+    "summary": "summaries/database.md",
+    "source": "docs/database.md"
+  },
+  {
+    "slug": "deployment/temporal",
+    "title": "Temporal namespaces",
+    "description": "Organization isolation and searchable run attributes.",
+    "group": "Operate",
+    "summary": "summaries/temporal-organizations.md",
+    "source": "docs/temporal-organizations.md"
+  },
+  {
+    "slug": "operations/observability",
+    "title": "Logs & metrics",
+    "description": "Sidecars, Prometheus metrics and request correlation.",
+    "group": "Operate",
+    "summary": "summaries/observability.md",
+    "source": "docs/observability.md"
+  },
+  {
+    "slug": "operations/troubleshooting",
+    "title": "Troubleshooting",
+    "description": "Find the right diagnostic path without resetting your data.",
+    "group": "Operate",
+    "file": "troubleshooting.md"
+  }
+]

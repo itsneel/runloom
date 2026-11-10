@@ -1,0 +1,112 @@
+{
+  "schema_version": "1.0",
+  "id": "employee-onboarding",
+  "name": "Employee onboarding",
+  "description": "Prepare a welcome message, obtain manager approval, and perform approved setup in parallel.",
+  "version": 0,
+  "trigger": { "type": "manual" },
+  "input_schema": {
+    "type": "object",
+    "required": ["employee_name", "department"],
+    "properties": {
+      "employee_name": { "type": "string" },
+      "department": { "type": "string" }
+    }
+  },
+  "steps": [
+    {
+      "id": "prepare-welcome",
+      "name": "Prepare welcome message",
+      "type": "activity",
+      "activity": "runloom.compose",
+      "with": { "template": "Welcome ${input.employee_name} to the ${input.department} team" },
+      "timeout_seconds": 30,
+      "retry": { "maximum_attempts": 3 }
+    },
+    {
+      "id": "manager-approval",
+      "name": "Manager approval",
+      "type": "approval",
+      "prompt": "Approve account setup for ${input.employee_name}?",
+      "timeout_seconds": 86400,
+      "on_timeout": "reject"
+    },
+    {
+      "id": "approval-route",
+      "name": "Route approval decision",
+      "type": "condition",
+      "if": {
+        "left": "${steps.manager-approval.output.approved}",
+        "operator": "equals",
+        "right": true
+      },
+      "then": [
+        {
+          "id": "setup-services",
+          "name": "Set up services",
+          "type": "parallel",
+          "branches": [
+            {
+              "id": "email-branch",
+              "steps": [
+                {
+                  "id": "email-account",
+                  "type": "activity",
+                  "activity": "runloom.echo",
+                  "with": { "system": "email", "employee": "${input.employee_name}", "status": "created" }
+                }
+              ]
+            },
+            {
+              "id": "chat-branch",
+              "steps": [
+                {
+                  "id": "chat-account",
+                  "type": "activity",
+                  "activity": "runloom.echo",
+                  "with": { "system": "chat", "employee": "${input.employee_name}", "status": "created" }
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "else": [
+        {
+          "id": "record-rejection",
+          "type": "activity",
+          "activity": "runloom.echo",
+          "with": { "status": "rejected", "comment": "${steps.manager-approval.output.comment}" }
+        }
+      ]
+    },
+    {
+      "id": "settle",
+      "name": "Allow systems to settle",
+      "type": "wait",
+      "seconds": 1
+    },
+    {
+      "id": "provisioning-callback",
+      "name": "Receive provisioning result",
+      "type": "callback",
+      "callback_key": "provisioning.ready",
+      "prompt": "Wait for the provisioning system to return account details",
+      "timeout_seconds": 86400,
+      "on_timeout": "fail"
+    },
+    {
+      "id": "operator-review",
+      "name": "Final operator review",
+      "type": "pause",
+      "message": "Review the provisioned accounts before completing onboarding",
+      "timeout_seconds": 86400,
+      "on_timeout": "fail"
+    }
+  ],
+  "output": {
+    "welcome": "${steps.prepare-welcome.output.message}",
+    "approved": "${steps.manager-approval.output.approved}",
+    "provisioning": "${steps.provisioning-callback.output.payload}"
+  }
+}

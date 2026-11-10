@@ -1,0 +1,54 @@
+<main class="dashboard" aria-labelledby="workflows-heading" [attr.aria-busy]="loading">
+  <button *ngIf="showNavigationToggle" class="navigation-toggle" type="button" aria-label="Toggle workspace sidebar" aria-controls="workspace-sidebar" [attr.aria-expanded]="navigationExpanded" (click)="toggleNavigation.emit()"><runloom-icon name="sidebar" /></button>
+  <button *ngIf="showProjectsBack" class="navigation-toggle" type="button" (click)="backToProjects.emit()">Back to projects</button>
+  <header class="page-heading">
+    <div><p class="eyebrow">Workflow library / {{ projectName }}</p><h1 id="workflows-heading">Workflows</h1><p>Browse your workflows. Open Details to view the graph or start editing.</p></div>
+    <button class="primary" type="button" [disabled]="!canCreate || !!openingId" (click)="create.emit()"><runloom-icon name="plus" /> New workflow</button>
+  </header>
+  <div class="project-toolbar">
+    <label class="status-filter"><span>Project</span><select aria-label="Browse project" [ngModel]="projectId" [disabled]="loading || !!openingId" (ngModelChange)="selectProject.emit($event)"><option *ngFor="let project of projects" [value]="project.id">{{ project.name }}</option></select></label>
+    <button *ngIf="canCreate" type="button" [disabled]="loading || !!openingId" (click)="renameProject.emit()">Rename project</button>
+    <label *ngIf="canCreate" class="status-filter"><span>Example</span><select aria-label="Guided example" [(ngModel)]="selectedExample" [disabled]="busy || loading || !!openingId"><option value="review">Callback and review</option><option value="parallel-subworkflows">Parallel child workflows</option></select></label>
+    <button *ngIf="canCreate" type="button" [disabled]="busy || loading || !!openingId" (click)="example.emit(selectedExample)">Try a guided example</button>
+  </div>
+
+  <section class="summary" aria-label="Project workflow summary" *ngIf="!loading && !error">
+    <div><span>Workflows in project</span><strong>{{ workflows.length }}</strong></div>
+    <div><span>With published versions</span><strong>{{ publishedCount }}</strong></div>
+    <div><span>With saved drafts</span><strong>{{ draftCount }}</strong></div>
+  </section>
+
+  <section class="library" aria-label="Workflows in this project">
+    <div class="toolbar">
+      <label class="search"><runloom-icon name="search" /><input aria-label="Search workflows" [(ngModel)]="search" placeholder="Search by name or ID" type="search" /></label>
+      <label class="status-filter"><span>Status</span><select aria-label="Filter workflows by status" [(ngModel)]="status"><option value="all">All workflows</option><option value="published">Published</option><option value="draft">Has saved draft</option></select></label>
+      <button type="button" class="refresh" [disabled]="loading || !!openingId" (click)="reload.emit()">Refresh</button>
+    </div>
+    <div class="empty" role="status" *ngIf="loading"><h2>Loading workflows…</h2><p>Getting the latest details for this project.</p></div>
+    <div class="empty" role="alert" *ngIf="!loading && error"><h2>Could not load workflows</h2><p>{{ error }}</p><button type="button" (click)="reload.emit()">Try again</button></div>
+    <ng-container *ngIf="!loading && !error">
+      <ng-container *ngIf="visibleWorkflows as rows">
+        <div class="table-scroll" *ngIf="rows.length">
+          <table>
+            <caption class="sr-only">Workflow names, IDs, published versions and saved drafts. Details opens the selected workflow.</caption>
+            <thead><tr><th scope="col">Workflow</th><th scope="col">Published version</th><th scope="col">Saved draft</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+            <tbody><tr *ngFor="let item of rows; trackBy: trackWorkflow">
+              <td><div class="identity"><span class="workflow-icon"><runloom-icon name="workflow" /></span><div><strong>{{ item.name }}</strong><code>{{ item.id }}</code></div></div></td>
+              <td><span class="badge" [class.published]="item.latest_version > 0">{{ item.latest_version > 0 ? 'Published · v' + item.latest_version : 'Not published' }}</span><small *ngIf="item.latest_version > 0 && item.published_kind">{{ item.published_kind === 'child' ? 'Child workflow' : 'Main workflow' }}</small></td>
+              <td><span class="draft-label">{{ item.has_draft ? 'Draft available' : 'No saved draft' }}</span></td>
+              <td class="actions"><button type="button" [attr.aria-label]="'Details for ' + item.name" [disabled]="busy || !!openingId" (click)="details.emit(item.id)">{{ openingId === item.id ? 'Opening…' : 'Details' }}<runloom-icon name="arrow" /></button><button *ngIf="canDelete && draftOnly(item)" class="danger" type="button" [disabled]="busy || !!openingId" [attr.aria-label]="'Delete workflow ' + item.name" (click)="deleteWorkflow.emit(item.id)">Delete</button></td>
+            </tr></tbody>
+          </table>
+        </div>
+        <div class="empty" *ngIf="!rows.length">
+          <span class="empty-icon"><runloom-icon name="workflow" /></span>
+          <h2>{{ workflows.length ? 'No matching workflows' : 'Your project starts here' }}</h2>
+          <p>{{ workflows.length ? 'Try another name, ID or status.' : 'Create a workflow to build your first automation in this project.' }}</p>
+          <button type="button" *ngIf="workflows.length" (click)="clearFilters()">Clear filters</button>
+          <button type="button" *ngIf="!workflows.length && canCreate" (click)="create.emit()">Create workflow</button>
+        </div>
+        <footer *ngIf="rows.length">{{ rows.length }} of {{ workflows.length }} workflows · {{ projectName }}</footer>
+      </ng-container>
+    </ng-container>
+  </section>
+</main>

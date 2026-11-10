@@ -1,0 +1,303 @@
+<div class="platform-shell">
+  <runloom-platform-navigation
+    [section]="section()"
+    [sections]="sections"
+    (openChange)="navigationOpen = $event"
+  />
+  <div class="platform-main" [attr.inert]="navigationOpen ? '' : null">
+    <header class="console-breadcrumb">
+      <span>Platform</span><span aria-hidden="true">/</span><strong>{{ pageTitle }}</strong>
+    </header>
+    <div
+      #content
+      class="console-scroll"
+      tabindex="0"
+      role="region"
+      aria-label="Platform page content"
+    >
+      <main class="console">
+        <header class="console-header">
+          <div>
+            <p class="eyebrow">RUNLOOM · PLATFORM</p>
+            <h1>{{ pageTitle }}</h1>
+            <p>Operational visibility. Explicit access. No tenant permission bypass.</p>
+          </div>
+        </header>
+        @if (loadingAccess()) {
+          <p role="status">Checking platform access…</p>
+        } @else {
+          @if (state.error()) {
+            <runloom-notice
+              tone="error"
+              [message]="state.error()"
+              (dismissed)="state.error.set('')"
+            />
+          }
+          @if (state.notice()) {
+            <runloom-notice
+              tone="success"
+              [message]="state.notice()"
+              (dismissed)="state.notice.set('')"
+            />
+          }
+          @if (!allowed()) {
+            <section class="panel">
+              <h2>Access restricted</h2>
+              <p>
+                This page requires a platform permission. Organization and team administrator roles
+                do not grant platform access.
+              </p>
+            </section>
+          } @else {
+            <div class="toolbar">
+              <p>
+                {{
+                  section() === 'health'
+                    ? 'Checks run every 30 seconds while this page is visible.'
+                    : 'Platform metadata only. Customer content is not exposed here.'
+                }}
+              </p>
+              <button [disabled]="state.busy()" (click)="refresh(state.offset())">
+                {{ state.busy() ? 'Refreshing…' : 'Refresh' }}
+              </button>
+            </div>
+            @if (section() === 'health') {
+              <section class="panel">
+                <h2>Service health</h2>
+                <p>
+                  Readiness is a limited dependency check, not a complete end-to-end test. LLM
+                  provider availability is not tested.
+                </p>
+                @if (state.health(); as health) {
+                  <p class="timestamp">Checked {{ health.checked_at | date: 'medium' }}</p>
+                  <div class="health-grid">
+                    @for (item of health.items; track item.service) {
+                      <article class="health-card">
+                        <div>
+                          <h3>{{ item.service }}</h3>
+                          <span
+                            class="badge"
+                            [class.healthy]="item.status === 'healthy'"
+                            [class.unavailable]="
+                              item.status === 'unavailable' || item.status === 'degraded'
+                            "
+                            >{{ item.status }}</span
+                          >
+                        </div>
+                        <p>{{ item.detail }}</p>
+                        <small>{{ item.latency_ms }} ms</small>
+                      </article>
+                    }
+                  </div>
+                } @else if (!state.busy()) {
+                  <p>Health information unavailable. Try refreshing.</p>
+                }
+              </section>
+            }
+            @if (section() === 'organizations') {
+              @if (access.can('platform.organizations.configure') && state.organizationSettings()) {
+                <section class="panel">
+                  <h2>Default organization creation policy</h2>
+                  <p>
+                    Applies to parents without an organization override. Choose 0–10 children per
+                    parent. Child organizations cannot contain another child. Keycloak
+                    administrators can override this Runloom policy.
+                  </p>
+                  <form (ngSubmit)="saveOrganizationSettings()" class="toolbar">
+                    <label
+                      >Maximum children per parent<input
+                        aria-label="Maximum child organizations"
+                        name="maxChildren"
+                        type="number"
+                        min="0"
+                        max="10"
+                        step="1"
+                        [(ngModel)]="maxChildren"
+                        [disabled]="saving() || state.busy()"
+                    /></label>
+                    <button type="submit" [disabled]="saving() || state.busy()">
+                      Save organization limit
+                    </button>
+                  </form>
+                </section>
+              }
+              <section class="panel">
+                <h2>Organization directory</h2>
+                <div class="table-wrap">
+                  <table class="organizations-table">
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>ID</th>
+                        <th>Teams</th>
+                        <th>Members</th>
+                        <th>Child organization limit</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (org of state.organizations(); track org.id) {
+                        <tr>
+                          <td>
+                            {{ org.name
+                            }}<small>{{
+                              org.parent_id ? 'Child organization' : 'Parent organization'
+                            }}</small>
+                          </td>
+                          <td class="identifier">{{ org.id }}</td>
+                          <td>{{ org.team_count }}</td>
+                          <td>{{ org.member_count }}</td>
+                          <td>
+                            <runloom-organization-limit
+                              [organization]="org"
+                              [canConfigure]="access.can('platform.organizations.configure')"
+                              [disabled]="state.busy() || saving()"
+                              (saved)="organizationLimitSaved()"
+                            />
+                          </td>
+                        </tr>
+                      } @empty {
+                        <tr>
+                          <td colspan="5">
+                            {{ state.busy() ? 'Loading…' : 'No organizations to display.' }}
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            }
+            @if (section() === 'staff') {
+              <section class="panel">
+                <h2>Platform assignments</h2>
+                <p>
+                  Users must sign in once before receiving a platform role. Restricted staff can
+                  view service status and organization metadata only.
+                </p>
+                <form (ngSubmit)="save()">
+                  <label
+                    >Existing user's email<input
+                      name="email"
+                      type="email"
+                      [(ngModel)]="email"
+                      required
+                      autocomplete="off" /></label
+                  ><label
+                    >Platform role<select name="role" [(ngModel)]="role">
+                      <option value="platform_staff">Restricted staff</option>
+                      <option value="platform_admin">Platform administrator</option>
+                      <option value="">Remove platform access</option>
+                    </select></label
+                  ><label class="reason"
+                    >Reason<input
+                      name="reason"
+                      [(ngModel)]="reason"
+                      minlength="3"
+                      maxlength="300"
+                      required
+                      placeholder="Why is this access changing?" /></label
+                  ><button
+                    class="primary"
+                    type="submit"
+                    [disabled]="saving() || !email.trim() || reason.trim().length < 3"
+                  >
+                    {{ saving() ? 'Saving…' : 'Update platform access' }}
+                  </button>
+                </form>
+                <p>
+                  The last platform administrator cannot be removed. Removing platform access does
+                  not change organization membership.
+                </p>
+                <div class="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>User</th>
+                        <th>Email</th>
+                        <th>Platform role</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (member of state.staff(); track member.id) {
+                        <tr>
+                          <td>{{ member.name || member.id }}</td>
+                          <td>{{ member.email }}</td>
+                          <td>
+                            {{
+                              member.role === 'platform_admin'
+                                ? 'Platform administrator'
+                                : 'Restricted staff'
+                            }}
+                          </td>
+                        </tr>
+                      } @empty {
+                        <tr>
+                          <td colspan="3">No platform assignments to display.</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            }
+            @if (section() === 'audit') {
+              <section class="panel">
+                <h2>Audit events</h2>
+                <p>
+                  Platform access changes only. Organization audit records remain within their
+                  existing boundaries.
+                </p>
+                <div class="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Time</th>
+                        <th>Action / target</th>
+                        <th>Actor</th>
+                        <th>Role change</th>
+                        <th>Reason</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (event of state.events(); track $index) {
+                        <tr>
+                          <td>{{ event.created_at | date: 'medium' }}</td>
+                          <td>
+                            {{ event.action }}<small class="identifier">{{ event.target }}</small>
+                          </td>
+                          <td class="identifier">{{ event.actor }}</td>
+                          <td>{{ event.previous_role || 'None' }} → {{ event.role || 'None' }}</td>
+                          <td>{{ event.reason }}</td>
+                        </tr>
+                      } @empty {
+                        <tr>
+                          <td colspan="5">No platform events to display.</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            }
+            @if (section() !== 'health') {
+              <footer class="pagination">
+                <span>{{ state.total() }} records</span
+                ><button
+                  [disabled]="state.busy() || state.offset() === 0"
+                  (click)="refresh(state.offset() - 25)"
+                >
+                  Previous</button
+                ><button
+                  [disabled]="state.busy() || state.offset() + 25 >= state.total()"
+                  (click)="refresh(state.offset() + 25)"
+                >
+                  Next
+                </button>
+              </footer>
+            }
+          }
+        }
+      </main>
+    </div>
+  </div>
+</div>

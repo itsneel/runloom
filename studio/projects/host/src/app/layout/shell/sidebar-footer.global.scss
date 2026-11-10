@@ -1,0 +1,15 @@
+// Scope the independently packaged theme picker's trigger to the Studio footer.
+// Its popover and the Platform console keep their own typography and spacing.
+app-root .sidebar-footer runloom-theme-picker > button.trigger {
+  --rl-icon-size: 18px;
+  min-height: 34px;
+  padding: 7px 10px;
+  font-size: 11px;
+  line-height: 16px;
+}
+
+@media (pointer: coarse) {
+  app-root .sidebar-footer runloom-theme-picker > button.trigger {
+    min-height: 44px;
+  }
+}

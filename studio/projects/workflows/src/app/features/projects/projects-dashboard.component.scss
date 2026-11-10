@@ -1,0 +1,49 @@
+:host { display: block; min-width: 0; height: 100%; overflow: auto; background: var(--rl-canvas); color: var(--rl-ink); }
+* { box-sizing: border-box; }
+.projects-page { max-width: 1440px; margin: 0 auto; padding: clamp(20px, 3vw, 44px); }
+h1, h2, p { margin: 0; }
+.page-heading { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 30px; }
+.eyebrow { font-size: 12px; margin-bottom: 10px; }
+h1 { font-size: 28px; font-weight: 650; letter-spacing: -.04em; margin-bottom: 10px; }
+p { color: var(--rl-secondary); font-size: 13px; line-height: 1.6; }
+button, input { font: inherit; }
+button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 38px; padding: 8px 13px; border: 1px solid var(--rl-border); border-radius: 8px; background: var(--rl-surface); color: var(--rl-ink); font-size: 12px; font-weight: 600; cursor: pointer; }
+button:hover { background: var(--rl-soft); border-color: var(--rl-accent-line); }
+button:disabled { opacity: .5; cursor: not-allowed; }
+button:focus-visible, input:focus-visible, .table-scroll:focus-visible { outline: 2px solid var(--rl-accent); outline-offset: -2px; }
+.primary { color: var(--rl-on-accent); background: var(--rl-accent); border-color: var(--rl-accent); }
+.primary:hover { background: var(--rl-accent-hover); }
+runloom-icon { --rl-icon-size: 17px; flex: none; }
+.navigation-toggle { margin-bottom: 16px; }
+.library { border: 1px solid var(--rl-border); border-radius: 12px; background: var(--rl-surface); overflow: hidden; box-shadow: var(--rl-shadow-sm); }
+.toolbar { display: flex; align-items: center; gap: 12px; padding: 18px 20px; border-bottom: 1px solid var(--rl-divider); }
+.search { display: flex; align-items: center; gap: 9px; flex: 1; min-width: 0; color: var(--rl-secondary); }
+.search input { width: 100%; min-width: 0; border: 0; padding: 9px 0; background: transparent; color: var(--rl-ink); font-size: 13px; }
+.table-scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; text-align: left; }
+th { padding: 13px 22px; background: var(--rl-soft); color: var(--rl-secondary); font-size: 11px; font-weight: 600; }
+td { padding: 20px 22px; border-top: 1px solid var(--rl-divider); vertical-align: middle; }
+tbody tr:hover { background: color-mix(in srgb, var(--rl-soft) 55%, transparent); }
+.project-identity { display: flex; align-items: center; gap: 13px; min-width: 200px; }
+.project-identity > div { min-width: 0; }
+.project-name { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.project-name strong { font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
+.badge { padding: 4px 7px; border-radius: 6px; background: var(--rl-soft); color: var(--rl-secondary); font-size: 11px; }
+.workflow-count { font-size: 13px; font-variant-numeric: tabular-nums; }
+h2 { font-size: 16px; font-weight: 600; overflow-wrap: anywhere; }
+code { display: block; font-size: 11px; margin-top: 5px; color: var(--rl-secondary); overflow-wrap: anywhere; }
+.folder-icon { display: grid; place-items: center; flex: none; width: 38px; height: 38px; border-radius: 10px; background: var(--rl-accent-soft); color: var(--rl-accent); }
+.project-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.project-actions button { white-space: nowrap; color: var(--rl-accent); }
+.project-actions runloom-icon { --rl-icon-size: 14px; }
+.project-actions button.danger { color: var(--rl-danger, #c34646); }
+footer { padding: 15px 22px; border-top: 1px solid var(--rl-divider); font-size: 11px; color: var(--rl-secondary); }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.empty { text-align: center; padding: 48px 20px; }
+.empty p { margin-top: 10px; }
+.empty button { margin-top: 20px; }
+@media (max-width: 720px) {
+  .page-heading { align-items: flex-start; flex-direction: column; gap: 16px; }
+  .toolbar { padding: 14px; }
+  th, td { padding: 14px; }
+}

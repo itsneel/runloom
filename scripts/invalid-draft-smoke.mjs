@@ -1,0 +1,91 @@
+// Real Go API/isolated storage; test authentication only. No workflows execute.
+import assert from 'node:assert/strict';
+const backend=process.env.RUNLOOM_PROMPT_API || 'http://127.0.0.1:17290';
+const fixture=await (await fetch(backend+'/fixture')).json();
+const {chromium}=await import(process.env.RUNLOOM_PLAYWRIGHT_MODULE || 'playwright');
+const browser=await chromium.launch({headless:true,...(process.env.RUNLOOM_CHROME?{executablePath:process.env.RUNLOOM_CHROME}:{})});
+const page=await browser.newPage({viewport:{width:1600,height:1050}});
+const errors=[];page.on('pageerror',e=>errors.push(e.message));
+await page.route('**/api/**',async route=>{
+ const url=new URL(route.request().url());
+ if(url.pathname.endsWith('/auth/config'))return route.fulfill({status:503,json:{}});
+ if(url.pathname.endsWith('/health'))return route.fulfill({json:{temporal:true,database:true}});
+ const response=await route.fetch({url:backend+url.pathname+url.search,headers:{...route.request().headers(),authorization:'Bearer admin','X-Runloom-Team':fixture.team}});
+ return route.fulfill({response});
+});
+const app=expression=>page.evaluate(expression=>new Function('app',`return (${expression})`)(window.ng.getComponent(document.querySelector('runloom-studio'))),expression);
+try{
+ await page.goto(process.env.RUNLOOM_UI_URL || 'http://localhost:4420');
+ await page.waitForFunction(()=>window.ng?.getComponent(document.querySelector('app-root'))?.auth.ready());
+ await page.evaluate(({team,org})=>{const auth=window.ng.getComponent(document.querySelector('app-root')).auth;auth.bearer=async()=>'test';auth.profile.set({user:{id:'admin',email:'admin@example.test',name:'Tester'},organizations:[{id:org,name:'Test org',role:'owner',teams:[{id:team,name:'Test team',role:'admin'}]}]});auth.organizationId.set(org);auth.teamId.set(team);auth.signedIn.set(true);},fixture);
+ await page.locator('runloom-studio').waitFor();await page.waitForTimeout(400);
+ await app("app.openDefinition('prompt-test', true)");
+ await page.getByRole('button',{name:/^Details for /}).first().click();
+ await page.getByRole('button',{name:'Edit workflow',exact:true}).click();
+ await page.locator('[data-node-id="ask"] .node-select').click();
+ const prompt=page.getByRole('textbox',{name:'Prompt and context',exact:true});
+ await prompt.fill('');
+ await page.locator('[data-node-id="ask"].node-invalid').waitFor();
+ assert.match(await app('app.draftValidationError'),/prompts are invalid/);
+ assert.equal(await page.locator('[data-node-id="ask"] .node-select').getAttribute('aria-invalid'),'true');
+ assert.match(await page.locator('.node-validation-message').innerText(),/prompts are invalid/);
+ await page.getByRole('button',{name:'Save',exact:true}).click();
+ await page.waitForFunction(()=>{const a=window.ng.getComponent(document.querySelector('runloom-studio'));return !a.versions.saving&&!a.hasUnsavedChanges;});
+ await page.getByText('Draft needs attention — publishing is blocked',{exact:true}).waitFor();
+ await page.locator('[data-node-id="ask"].node-invalid').waitFor();
+ assert.equal(await app('app.hasUnsavedChanges'),false);
+ assert.equal(await page.getByRole('button',{name:'Publish',exact:true}).isDisabled(),true);
+ await app("app.openDefinition('prompt-test',true)");
+ await page.getByText('Draft needs attention — publishing is blocked',{exact:true}).waitFor();
+ const invalid=await fetch(backend+'/api/v1/studio/definitions/prompt-test/publish',{method:'POST',headers:{authorization:'Bearer admin','X-Runloom-Team':fixture.team}});
+ assert.equal(invalid.status,422);
+ await page.getByRole('button',{name:'Edit workflow',exact:true}).click();
+ await page.locator('[data-node-id="ask"] .node-select').click();
+ await prompt.fill('A complete prompt');
+ await page.waitForFunction(()=>!document.querySelector('[data-node-id="ask"].node-invalid'));
+ await page.getByRole('button',{name:'Publish',exact:true}).click();
+ await page.waitForFunction(()=>window.ng.getComponent(document.querySelector('runloom-studio')).definition.version===1);
+ assert.equal(await app('app.draftValidationError'),'');
+ await page.getByRole('button',{name:'Delete node',exact:true}).click();
+ await page.getByRole('button',{name:'Save',exact:true}).click();
+ await page.getByText('Draft needs attention — publishing is blocked',{exact:true}).waitFor();
+ assert.equal(await app('app.definition.steps.length'),0);
+ const published=await (await fetch(backend+'/api/v1/studio/definitions/prompt-test?version=1',{headers:{authorization:'Bearer admin','X-Runloom-Team':fixture.team}})).json();
+ assert.equal(published.steps[0].prompt,'A complete prompt');
+ await app(`(app.definition.steps=[{id:'api',type:'http'}, {id:'fork',type:'parallel',branches:[{id:'a',steps:[{id:'nested',type:'wait',seconds:0}]}]}, {id:'constructor',type:'wait',seconds:1}],app.markChanged())`);
+ for(const id of ['api','fork','nested'])await page.locator(`[data-node-id="${id}"].node-invalid`).waitFor();
+ assert.equal(await page.locator('[data-node-id="constructor"].node-invalid').count(),0);
+ assert.equal(await page.locator('.node-invalid').count(),3);
+ await page.locator('[data-node-id="api"] .node-select').click();
+ assert.match(await page.locator('.node-validation-message').innerText(),/http/i);
+ for(const theme of ['light','dark']) {
+   await page.evaluate(theme=>document.documentElement.setAttribute('data-theme',theme),theme);
+   const colors=await page.locator('[data-node-id="api"]').evaluate(el=>({border:getComputedStyle(el).borderTopColor,danger:getComputedStyle(el).getPropertyValue('--rl-danger').trim()}));
+   assert.notEqual(colors.border,'rgba(0, 0, 0, 0)'); assert(colors.danger);
+   if(process.env.RUNLOOM_SCREENSHOT_PREFIX)await page.screenshot({path:`${process.env.RUNLOOM_SCREENSHOT_PREFIX}-${theme}.png`});
+ }
+ await app(`(app.definition.steps=[{id:'constructor',type:'activity',activity:'runloom.echo',with:{}}],app.markChanged())`);
+ await page.waitForFunction(()=>document.querySelectorAll('.node-invalid').length===0);
+ await page.locator('[data-node-id="constructor"] .node-select').click();
+ await app(`app.editor.setObjectField('with','{')`);
+ await page.locator('[data-node-id="constructor"].node-invalid').waitFor();
+ await app(`app.editor.setObjectField('with','{}')`);
+ await page.waitForFunction(()=>document.querySelectorAll('.node-invalid').length===0);
+ // A slow response for an older edit must never turn a repaired node red.
+ let releaseValidation, validationStarted;
+ const held=new Promise(resolve=>{releaseValidation=resolve;});
+ const started=new Promise(resolve=>{validationStarted=resolve;});
+ await page.route('**/definitions/validate',async route=>{
+   if(route.request().postDataJSON().steps[0]?.seconds!==0)return route.fallback();
+   const response=await route.fetch({url:backend+'/api/v1/studio/definitions/validate',headers:{...route.request().headers(),authorization:'Bearer admin','X-Runloom-Team':fixture.team}});
+   validationStarted();await held;await route.fulfill({response});
+ });
+ await app(`(app.definition.steps=[{id:'slow',type:'wait',seconds:0}],app.markChanged())`);
+ await started;
+ await app(`(app.definition.steps[0].seconds=1,app.markChanged())`);
+ await page.waitForTimeout(600);releaseValidation();await page.waitForTimeout(250);
+ assert.equal(await page.locator('.node-invalid').count(),0);
+ assert.equal(await app('app.draftValidationError'),'');
+ assert.deepEqual(errors,[]);
+ console.log('PASS live red-node diagnostics, nested errors, inspector messages, both themes, JSON errors, repair/removal clearing, invalid draft save/reload, publishing guards');
+}finally{await page.unrouteAll({behavior:'ignoreErrors'});await browser.close();await fetch(backend+'/done',{method:'POST'});}

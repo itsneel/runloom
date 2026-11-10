@@ -1,0 +1,715 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "docs": {
+      "type": "object", "additionalProperties": false,
+      "required": ["enabled", "publicURL", "replicas", "image", "resources", "ingress"],
+      "properties": {
+        "enabled": {"type": "boolean"},
+        "publicURL": {"type": "string", "pattern": "^https?://[a-zA-Z0-9.-]+(:[0-9]+)?/?$"},
+        "replicas": {"type": "integer", "minimum": 1},
+        "image": {"type": "object", "required": ["repository", "tag", "pullPolicy"], "properties": {
+          "repository": {"type": "string", "minLength": 1}, "tag": {"type": "string", "minLength": 1},
+          "pullPolicy": {"enum": ["IfNotPresent", "Always", "Never"]}
+        }},
+        "resources": {"type": "object"},
+        "ingress": {"type": "object", "additionalProperties": false, "properties": {
+          "enabled": {"type": "boolean"}, "className": {"type": "string"},
+          "annotations": {"type": "object"}, "tls": {"type": "array"}
+        }}
+      }
+    },
+    "assistant": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "enabled": {"type":"boolean"},
+        "replicas": {"type":"integer","minimum":1},
+        "databaseName": {"type":"string","minLength":1},
+        "databaseSecret": {"type":"string","minLength":1},
+        "databaseURLKey": {"type":"string","minLength":1},
+        "databasePasswordKey": {"type":"string","minLength":1},
+        "provider": {"type":"string","enum":["disabled","openai-compatible"]},
+        "baseURL": {"type":"string"},
+        "model": {"type":"string"},
+        "allowHTTP": {"type":"boolean"},
+        "maxTokens": {"type":"integer","minimum":1,"maximum":8192},
+        "apiKeySecret": {"type":"string"},
+        "apiKeyKey": {"type":"string","minLength":1},
+        "resources": {"type":"object"}
+      }
+    },
+    "databaseConnections": {"type":"object","additionalProperties":false,"properties":{"allowedAddresses":{"type":"array","items":{"type":"string","pattern":"^.+:[0-9]+$"}}}},
+    "observability": {
+      "type": "object", "additionalProperties": false,
+      "required": ["enabled", "collectorImage", "collectorResources", "prometheus"],
+      "properties": {
+        "enabled": {"type": "boolean"},
+        "collectorImage": {"type": "string", "minLength": 1},
+        "collectorConfigMap": {"type": "string"},
+        "collectorResources": {"type": "object"},
+        "prometheus": {
+          "type": "object", "additionalProperties": false,
+          "properties": {
+            "enabled": {"type": "boolean"},
+            "image": {"type": "string", "minLength": 1},
+            "retention": {"type": "string", "pattern": "^[1-9][0-9]*[hd]$"},
+            "storageSize": {"type": "string", "pattern": "^[1-9][0-9]*Gi$"},
+            "storageClass": {"type": "string"},
+            "resources": {"type": "object"}
+          }
+        }
+      }
+    },
+    "serviceAccount": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "create": {"type": "boolean"},
+        "name": {"type": "string", "maxLength": 48, "pattern": "^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"},
+        "annotations": {"$ref": "#/definitions/annotations"}
+      }
+    },
+    "service": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "uiType": {"enum": ["ClusterIP", "NodePort", "LoadBalancer"]},
+        "annotations": {"$ref": "#/definitions/annotations"},
+        "uiAnnotations": {"$ref": "#/definitions/annotations"}
+      }
+    },
+    "autoscaling": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "defaults": {"allOf": [{"$ref": "#/definitions/autoscalingSettings"}, {"required": ["minReplicas", "maxReplicas", "targetCPUUtilizationPercentage", "targetMemoryUtilizationPercentage"]}]},
+        "workloads": {
+          "type": "object",
+          "propertyNames": {"enum": ["api", "auth", "workflows", "management", "worker", "ui", "workflows-ui", "management-ui", "platform-ui"]},
+          "additionalProperties": {"$ref": "#/definitions/autoscalingSettings"}
+        }
+      }
+    },
+    "podDisruptionBudgets": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "workloads": {
+          "type": "object",
+          "propertyNames": {"enum": ["api", "auth", "workflows", "management", "worker", "ui", "workflows-ui", "management-ui", "platform-ui"]},
+          "additionalProperties": {
+            "type": "object", "additionalProperties": false,
+            "required": ["enabled", "maxUnavailable"],
+            "properties": {
+              "enabled": {"type": "boolean"},
+              "maxUnavailable": {"oneOf": [{"type": "integer", "minimum": 0}, {"type": "string", "pattern": "^(100|[0-9]{1,2})%$"}]}
+            }
+          }
+        }
+      }
+    },
+    "topologySpreadConstraints": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["maxSkew", "topologyKey", "whenUnsatisfiable"],
+        "properties": {
+          "maxSkew": {"type": "integer", "minimum": 1},
+          "topologyKey": {"type": "string", "minLength": 1},
+          "whenUnsatisfiable": {"enum": ["DoNotSchedule", "ScheduleAnyway"]}
+        }
+      }
+    },
+    "databaseSetup": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {"type": "boolean"},
+        "existingSecret": {"type": "string"}
+      }
+    },
+    "localSetup": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {"managed": {"type": "boolean"}}
+    },
+    "llm": {
+      "type": "object",
+      "properties": {
+        "provider": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "pricingConfigMap": {
+          "type": "string"
+        },
+        "pricingKey": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "email": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "host": {
+          "type": "string"
+        },
+        "port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "from": {
+          "type": "string",
+          "minLength": 1
+        },
+        "tls": {
+          "enum": [
+            "starttls",
+            "tls",
+            "none"
+          ]
+        },
+        "username": {
+          "type": "string"
+        },
+        "existingSecret": {
+          "type": "string"
+        },
+        "secretKey": {
+          "type": "string",
+          "minLength": 1
+        },
+        "allowedDomains": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "executionSecurity": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "sensitiveRunRoles": {"type":"array","minItems":1,"uniqueItems":true,"items":{"enum":["admin","editor","viewer"]}},
+        "allowLegacyPayloads": {"type":"boolean"},
+        "existingKeyringSecret": {"type":"string"},
+        "keyringSecretKey": {"type":"string","minLength":1}
+      }
+    },
+    "workflowSecrets": {
+      "type": "object",
+      "description": "Shared vault encryption key mounted read-only into Workflows and worker, never Auth, Management, gateway or UI.",
+      "properties": {
+        "existingSecret": {
+          "type": "string",
+          "description": "Existing Kubernetes Secret in the release namespace. Overrides development key generation. Required to enable the vault in hosted mode."
+        },
+        "secretKey": {
+          "type": "string",
+          "description": "Secret data entry containing exactly 32 binary bytes; not a plaintext key value.",
+          "minLength": 1
+        },
+        "externalSecret": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "targetName": {
+              "type": "string"
+            },
+            "secretStoreRef": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "kind": {
+                  "enum": [
+                    "SecretStore",
+                    "ClusterSecretStore"
+                  ]
+                }
+              }
+            },
+            "remoteRef": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string"
+                },
+                "property": {
+                  "type": "string"
+                },
+                "decodingStrategy": {
+                  "enum": [
+                    "Base64",
+                    "None"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "consumer": {
+      "type": "object",
+      "properties": {
+        "audience": {
+          "type": "string",
+          "minLength": 1
+        },
+        "provisioning": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "adminURL": {
+              "type": "string"
+            },
+            "clientID": {
+              "type": "string",
+              "minLength": 1
+            },
+            "existingSecret": {
+              "type": "string"
+            },
+            "secretKey": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      }
+    },
+    "auth": {
+      "type": "object",
+      "required": [
+        "publicURL",
+        "url",
+        "issuer",
+        "jwksURL",
+        "realm",
+        "clientID",
+        "googleEnabled"
+      ],
+      "properties": {
+        "requiredACR": {"type":"string","maxLength":128},
+        "maxAuthAge": {"type":"string","pattern":"^$|^[1-9][0-9]*(s|m|h)$"},
+        "publicURL": {
+          "type": "string",
+          "pattern": "^https?://([a-zA-Z0-9]([a-zA-Z0-9.-]*[a-zA-Z0-9])?|\\[[0-9a-fA-F:]+\\])(:[0-9]{1,5})?$"
+        },
+        "url": {
+          "type": "string"
+        },
+        "issuer": {
+          "type": "string"
+        },
+        "jwksURL": {
+          "type": "string"
+        },
+        "realm": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "clientID": {
+          "type": "string",
+          "minLength": 1
+        },
+        "googleEnabled": {
+          "type": "boolean"
+        }
+      }
+    },
+    "images": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "auth",
+        "workflows",
+        "worker",
+        "management",
+        "gateway",
+        "ui",
+        "workflows-ui",
+        "management-ui"
+      ],
+      "properties": {
+        "database-setup": {"$ref": "#/definitions/image"},
+        "localAdmin": {"$ref": "#/definitions/image"},
+        "worker": {"$ref": "#/definitions/image"},
+        "assistant": {"$ref": "#/definitions/image"},
+        "auth": {
+          "$ref": "#/definitions/image"
+        },
+        "workflows": {
+          "$ref": "#/definitions/image"
+        },
+        "management": {
+          "$ref": "#/definitions/image"
+        },
+        "gateway": {
+          "$ref": "#/definitions/image"
+        },
+        "ui": {
+          "$ref": "#/definitions/image"
+        },
+        "workflows-ui": {
+          "$ref": "#/definitions/image"
+        },
+        "management-ui": {
+          "$ref": "#/definitions/image"
+        },
+        "platform-ui": {
+          "$ref": "#/definitions/image"
+        }
+      }
+    },
+    "platformAccess": {
+      "type": "object", "additionalProperties": false,
+      "properties": {"requiredACR": {"type": "string"}, "maxAuthAge": {"type": "string", "minLength": 2}}
+    },
+    "api": {
+      "type": "object",
+      "properties": {
+        "replicas": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "resources": {
+          "type": "object"
+        }
+      }
+    },
+    "worker": {
+      "type": "object",
+      "properties": {
+        "replicas": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "resources": {
+          "type": "object"
+        }
+      }
+    },
+    "ui": {
+      "type": "object",
+      "properties": {
+        "replicas": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "resources": {
+          "type": "object"
+        }
+      }
+    },
+    "temporal": {
+      "type": "object",
+      "properties": {
+        "tls": {
+          "type":"object", "additionalProperties":false,
+          "properties": {
+            "enabled":{"type":"boolean"}, "serverName":{"type":"string"},
+            "existingSecret":{"type":"string"}, "caKey":{"type":"string"},
+            "certKey":{"type":"string"}, "keyKey":{"type":"string"}
+          }
+        },
+        "address": {
+          "type": "string"
+        },
+        "namespace": {
+          "type": "string",
+          "minLength": 1
+        },
+        "namespacePrefix": {"type":"string","pattern":"^$|^[a-z][a-z0-9-]{0,62}$"},
+        "retentionDays": {"type":"integer","minimum":1,"maximum":3650},
+        "taskQueue": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "database": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "driver"
+      ],
+      "properties": {
+        "driver": {
+          "enum": [
+            "postgres",
+            "mongodb"
+          ]
+        }
+      }
+    },
+    "development": {
+      "type": "object",
+      "properties": {
+        "keycloakJavaOptsHeap": {"type": "string", "minLength": 1},
+        "keycloakJavaOptsAppend": {"type": "string", "minLength": 1},
+        "enabled": {
+          "type": "boolean"
+        },
+        "persistence": {
+          "type": "object",
+          "properties": {
+            "size": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]*(Mi|Gi|Ti)$"
+            },
+            "storageClass": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "ingress": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "className": {"type": "string"},
+        "annotations": {"$ref": "#/definitions/annotations"},
+        "host": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 253,
+          "pattern": "^(\\*\\.)?[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$"
+        },
+        "tls": {
+          "type": "array",
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["secretName", "hosts"],
+            "properties": {
+              "secretName": {"type": "string", "minLength": 1},
+              "hosts": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
+            }
+          }
+        }
+      }
+    },
+    "workflows-ui": {
+      "type": "object",
+      "properties": {
+        "replicas": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "resources": {
+          "type": "object"
+        }
+      }
+    },
+    "platform-ui": {"$ref": "#/properties/management-ui"},
+    "management-ui": {
+      "type": "object",
+      "properties": {
+        "replicas": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "resources": {
+          "type": "object"
+        }
+      }
+    },
+    "splitServices": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "enabled",
+        "resources",
+        "databases",
+        "credentials",
+        "trustConfigMap"
+      ],
+      "properties": {
+        "enabled": {
+          "const": true
+        },
+        "resources": {
+          "$ref": "#/definitions/scaling"
+        },
+        "auth": {
+          "$ref": "#/definitions/scaling"
+        },
+        "workflows": {
+          "$ref": "#/definitions/scaling"
+        },
+        "management": {
+          "$ref": "#/definitions/scaling"
+        },
+        "trustConfigMap": {
+          "type": "string",
+          "minLength": 1
+        },
+        "databases": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "auth",
+            "workflows",
+            "management"
+          ],
+          "properties": {
+            "auth": {
+              "$ref": "#/definitions/database"
+            },
+            "workflows": {
+              "$ref": "#/definitions/database"
+            },
+            "management": {
+              "$ref": "#/definitions/database"
+            }
+          }
+        },
+        "credentials": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "auth",
+            "workflows",
+            "management",
+            "worker"
+          ],
+          "properties": {
+            "auth": {
+              "type": "string",
+              "minLength": 1
+            },
+            "workflows": {
+              "type": "string",
+              "minLength": 1
+            },
+            "management": {
+              "type": "string",
+              "minLength": 1
+            },
+            "worker": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "annotations": {"type": "object", "additionalProperties": {"type": "string"}},
+    "autoscalingSettings": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "enabled": {"type": "boolean"},
+        "minReplicas": {"type": "integer", "minimum": 1},
+        "maxReplicas": {"type": "integer", "minimum": 1},
+        "targetCPUUtilizationPercentage": {"type": "integer", "minimum": 0},
+        "targetMemoryUtilizationPercentage": {"type": "integer", "minimum": 0},
+        "behavior": {
+          "type": "object", "additionalProperties": false,
+          "properties": {
+            "scaleUp": {"$ref": "#/definitions/scalingBehavior"},
+            "scaleDown": {"$ref": "#/definitions/scalingBehavior"}
+          }
+        }
+      }
+    },
+    "scalingBehavior": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "stabilizationWindowSeconds": {"type": "integer", "minimum": 0, "maximum": 3600},
+        "selectPolicy": {"enum": ["Max", "Min", "Disabled"]},
+        "policies": {
+          "type": "array", "minItems": 1,
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["type", "value", "periodSeconds"],
+            "properties": {
+              "type": {"enum": ["Pods", "Percent"]},
+              "value": {"type": "integer", "minimum": 1},
+              "periodSeconds": {"type": "integer", "minimum": 1, "maximum": 1800}
+            }
+          }
+        }
+      }
+    },
+    "image": {
+      "type": "object",
+      "required": [
+        "repository",
+        "tag",
+        "pullPolicy"
+      ],
+      "properties": {
+        "repository": {
+          "type": "string",
+          "minLength": 1
+        },
+        "tag": {
+          "type": "string",
+          "minLength": 1
+        },
+        "pullPolicy": {
+          "enum": [
+            "Always",
+            "IfNotPresent",
+            "Never"
+          ]
+        }
+      }
+    },
+    "scaling": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "replicas": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "resources": {
+          "type": "object"
+        }
+      }
+    },
+    "database": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "existingSecret",
+        "secretKey"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-zA-Z][a-zA-Z0-9_]*$"
+        },
+        "existingSecret": {
+          "type": "string",
+          "minLength": 1
+        },
+        "secretKey": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  },
+  "required": [
+    "images",
+    "splitServices",
+    "database"
+  ]
+}

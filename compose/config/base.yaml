@@ -1,0 +1,8 @@
+{
+  "TEMPORAL_ADDRESS": "temporal:7233",
+  "TEMPORAL_NAMESPACE": "default",
+  "RUNLOOM_TASK_QUEUE": "runloom",
+  "RUNLOOM_DATABASE_DRIVER": "postgres",
+  "RUNLOOM_DATABASE_NAME": "runloom",
+  "RUNLOOM_DATABASE_URL_FILE": "/run/secrets/database-url"
+}

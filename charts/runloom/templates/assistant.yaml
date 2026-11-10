@@ -1,0 +1,144 @@
+{{- if .Values.assistant.enabled }}
+{{- if and .Values.databaseSetup.enabled (ne .Values.assistant.databaseName "runloom_assistant") }}{{ fail "databaseSetup requires assistant.databaseName=runloom_assistant" }}{{ end }}
+{{- $base := fromYaml (include "runloom.runtimeConfig" (dict "root" . "component" "api")) }}
+{{- $cfg := pick $base "RUNLOOM_OIDC_ISSUER" "RUNLOOM_OIDC_JWKS_URL" "RUNLOOM_OIDC_CLIENT_ID" "RUNLOOM_OIDC_REQUIRED_ACR" "RUNLOOM_OIDC_MAX_AUTH_AGE" }}
+{{- $_ := set $cfg "RUNLOOM_API_ADDRESS" "0.0.0.0:8080" }}
+{{- $_ := set $cfg "RUNLOOM_AUTH_URL" (printf "http://%s-auth:8080" (include "runloom.fullname" .)) }}
+{{- $_ := set $cfg "RUNLOOM_WORKFLOWS_URL" (printf "http://%s-workflows:8080" (include "runloom.fullname" .)) }}
+{{- $_ := set $cfg "RUNLOOM_DATABASE_DRIVER" .Values.database.driver }}
+{{- $_ := set $cfg "RUNLOOM_DATABASE_NAME" .Values.assistant.databaseName }}
+{{- $_ := set $cfg "RUNLOOM_DATABASE_URL_FILE" "/var/run/runloom-database/url" }}
+{{- $_ := set $cfg "RUNLOOM_ASSISTANT_PROVIDER" .Values.assistant.provider }}
+{{- $_ := set $cfg "RUNLOOM_ASSISTANT_BASE_URL" .Values.assistant.baseURL }}
+{{- $_ := set $cfg "RUNLOOM_ASSISTANT_MODEL" .Values.assistant.model }}
+{{- $_ := set $cfg "RUNLOOM_ASSISTANT_ALLOW_HTTP" (toString .Values.assistant.allowHTTP) }}
+{{- $_ := set $cfg "RUNLOOM_ASSISTANT_MAX_TOKENS" (toString .Values.assistant.maxTokens) }}
+{{- if .Values.observability.enabled }}
+{{- $_ := set $cfg "RUNLOOM_TELEMETRY_ENDPOINT" "http://127.0.0.1:4318" }}
+{{- end }}
+{{- if .Values.assistant.apiKeySecret }}{{- $_ := set $cfg "RUNLOOM_ASSISTANT_API_KEY_FILE" "/var/run/runloom-assistant-key/api-key" }}{{ end }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "runloom.fullname" . }}-assistant-config
+data:
+  config.yaml: |
+    {{- toYaml $cfg | nindent 4 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "runloom.fullname" . }}-assistant
+spec:
+  selector:
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: assistant
+  ports: [{name: http, port: 8080, targetPort: http}]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "runloom.fullname" . }}-assistant
+spec:
+  replicas: {{ .Values.assistant.replicas }}
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: assistant
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: assistant
+      annotations:
+        checksum/config: {{ toYaml $cfg | sha256sum }}
+        {{- if .Values.observability.enabled }}
+        checksum/observability: {{ include (print $.Template.BasePath "/observability.yaml") . | sha256sum }}
+        {{- end }}
+    spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 30
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: assistant
+          image: {{ printf "%s:%s" .Values.images.assistant.repository .Values.images.assistant.tag | quote }}
+          imagePullPolicy: {{ .Values.images.assistant.pullPolicy }}
+          env:
+            - {name: RUNLOOM_CONFIG_FILE, value: /etc/runloom/config.yaml}
+          ports: [{name: http, containerPort: 8080}]
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}
+          startupProbe:
+            httpGet: {path: /healthz, port: http}
+            periodSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            httpGet: {path: /readyz, port: http}
+            periodSeconds: 5
+            timeoutSeconds: 3
+          livenessProbe:
+            httpGet: {path: /healthz, port: http}
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.assistant.resources | nindent 12 }}
+          volumeMounts:
+            - {name: configuration, mountPath: /etc/runloom, readOnly: true}
+            - {name: database, mountPath: /var/run/runloom-database, readOnly: true}
+            {{- if .Values.assistant.apiKeySecret }}
+            - {name: provider-key, mountPath: /var/run/runloom-assistant-key, readOnly: true}
+            {{- end }}
+        {{- if .Values.observability.enabled }}
+        - name: telemetry
+          image: {{ .Values.observability.collectorImage | quote }}
+          args: ["--config=/etc/otel/config.yaml"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+          ports:
+            - {name: metrics, containerPort: 8889}
+          livenessProbe:
+            httpGet: {path: /, port: 13133}
+            initialDelaySeconds: 10
+          resources:
+            {{- toYaml .Values.observability.collectorResources | nindent 12 }}
+          volumeMounts:
+            - {name: telemetry-config, mountPath: /etc/otel, readOnly: true}
+            - {name: telemetry-logs, mountPath: /var/log/telemetry}
+        {{- end }}
+      volumes:
+        {{- if .Values.observability.enabled }}
+        - name: telemetry-config
+          configMap:
+            name: {{ default (printf "%s-collector" (include "runloom.fullname" .)) .Values.observability.collectorConfigMap }}
+        - name: telemetry-logs
+          emptyDir: {sizeLimit: 64Mi}
+        {{- end }}
+        - name: configuration
+          configMap:
+            name: {{ include "runloom.fullname" . }}-assistant-config
+        - name: database
+          secret:
+            secretName: {{ required "assistant.databaseSecret is required" .Values.assistant.databaseSecret }}
+            defaultMode: 0440
+            items: [{key: {{ .Values.assistant.databaseURLKey | quote }}, path: url}]
+        {{- if .Values.assistant.apiKeySecret }}
+        - name: provider-key
+          secret:
+            secretName: {{ .Values.assistant.apiKeySecret }}
+            defaultMode: 0440
+            items: [{key: {{ .Values.assistant.apiKeyKey | quote }}, path: api-key}]
+        {{- end }}
+{{- end }}

@@ -1,0 +1,8 @@
+{
+  "name": "Sample hourly greeting",
+  "definition_id": "parent-with-subworkflow",
+  "version": 1,
+  "input": { "name": "Avery" },
+  "interval_seconds": 3600,
+  "paused": true
+}

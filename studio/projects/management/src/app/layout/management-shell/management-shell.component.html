@@ -1,0 +1,330 @@
+@if (error) {
+  <runloom-notice [message]="error" tone="error" (dismissed)="error = ''" />
+}
+@if (notice) {
+  <runloom-notice [message]="notice" tone="success" (dismissed)="notice = ''" />
+}
+<main class="management">
+  <header class="page-heading">
+    <p class="eyebrow">WORKSPACE / {{ auth.organization()?.name || 'GET STARTED' }}</p>
+    <h1>{{ pageTitle }}</h1>
+    <p>
+      @switch (managementSection) {
+        @case ('schedules') {
+          Manage scheduled starts for your team's published workflows, all in one place.
+        }
+        @case ('prompts') {
+          Create, version and publish reusable prompts for your team. Keep workflow nodes pinned to
+          the version you choose.
+        }
+        @case ('runs') {
+          Explore workflow executions, inputs, outputs and audit trails in one place.
+        }
+        @case ('analytics') {
+          Understand LLM spend across runs, teams, and models. Compare trends and see where recorded
+          usage is still unpriced.
+        }
+        @case ('budgets') {
+          Reusable monthly UTC policies. Soft limits warn; hard limits pause workflows without
+          canceling them.
+        }
+        @case ('teams') {
+          Give every team a space to build. Manage who can view, edit, and run workflows.
+        }
+        @case ('organization') {
+          The people and permissions behind your workspace.
+        }
+        @case ('accounts') {
+          Secure access for applications that run your team's workflows.
+        }
+        @case ('secrets') {
+          Keep credentials out of workflow definitions. Share them safely with your team.
+        }
+      }
+    </p>
+  </header>
+  @if (managementSection === 'teams') {
+    @if (auth.organization()) {
+      <div class="section-heading">
+        <h2>
+          Your teams
+          <span class="count">{{ auth.organization()?.teams?.length || 0 }}</span>
+        </h2>
+        <span>Choose a team to manage its access</span>
+      </div>
+      <div class="team-grid">
+        @for (team of auth.organization()?.teams || []; track team.id) {
+          <button
+            class="team-card"
+            [class.selected]="team.id === auth.teamId()"
+            [attr.aria-label]="'Manage team ' + team.name"
+            [attr.aria-pressed]="team.id === auth.teamId()"
+            [disabled]="busy"
+            (click)="selectTeam(team.id)"
+          >
+            <span class="team-card-top"
+              ><span class="team-avatar"><runloom-icon name="team" /></span
+              ><span class="role-pill">{{ team.role }}</span></span
+            ><strong>{{ team.name }}</strong
+            ><span class="team-card-bottom"
+              >{{ team.id === auth.teamId() ? 'Selected team' : 'Manage access'
+              }}<runloom-icon name="arrow"
+            /></span>
+          </button>
+        } @empty {
+          <p class="empty-state">
+            You don't have access to a team yet. An organization admin can add you.
+          </p>
+        }
+      </div>
+      @if (auth.orgAdmin()) {
+        <section class="create-team">
+          <div>
+            <h3>A new space for your team</h3>
+            <p>Workflows, runs, and history stay scoped to each team.</p>
+          </div>
+          <form (ngSubmit)="createTeam()">
+            <input
+              name="teamName"
+              aria-label="New team name"
+              [(ngModel)]="teamName"
+              required
+              maxlength="120"
+              placeholder="Team name"
+            /><button class="primary" [disabled]="busy || !teamName.trim()">
+              <runloom-icon name="plus" />Create team
+            </button>
+          </form>
+        </section>
+      }
+      @if (auth.team()) {
+        <section class="management-card">
+          <div class="section-heading">
+            <div>
+              <h2>{{ auth.team()?.name }} members</h2>
+              <p>Admins manage access. Editors build and run. Viewers can browse.</p>
+            </div>
+            <span class="role-pill">{{ auth.team()?.role }} access</span>
+          </div>
+          @if (auth.teamAdmin()) {
+            <div class="add-member">
+              <h3>Add a team member</h3>
+              <p>
+                Add an existing organization member by email. Organization owners and admins already
+                have access.
+              </p>
+              <form (ngSubmit)="saveMember(true, teamEmail, teamRole)">
+                <input
+                  name="teamEmail"
+                  type="email"
+                  aria-label="Team member email"
+                  [(ngModel)]="teamEmail"
+                  required
+                  placeholder="person@example.com"
+                /><select name="teamRole" aria-label="Team member role" [(ngModel)]="teamRole">
+                  <option value="viewer">Viewer</option>
+                  <option value="editor">Editor</option>
+                  <option value="admin">Admin</option></select
+                ><button class="primary" [disabled]="busy || !teamEmail">Add to team</button>
+              </form>
+            </div>
+          }
+          <div class="member-toolbar">
+            <h3>
+              Team members <span class="count">{{ teamMembers.length }}</span>
+            </h3>
+            <label class="member-search"
+              ><runloom-icon name="search" /><input
+                aria-label="Search team members"
+                placeholder="Search members"
+                [(ngModel)]="memberSearch"
+            /></label>
+          </div>
+          <div class="member-table" [attr.aria-busy]="busy">
+            @for (member of shownTeamMembers; track member.email) {
+              <div
+                class="member-row"
+                [class.member-row-readonly]="!auth.teamAdmin() || member.inherited"
+              >
+                <span class="avatar">{{ initials(member.email) }}</span>
+                <div class="member-identity">
+                  <strong>{{ member.email }}</strong
+                  ><small>{{
+                    member.inherited
+                      ? 'Access through organization role'
+                      : member.user_id
+                        ? 'Joined'
+                        : 'Pending sign-in'
+                  }}</small>
+                </div>
+                @if (auth.teamAdmin() && !member.inherited) {
+                  <select
+                    aria-label="Change team role"
+                    [ngModel]="member.role"
+                    (ngModelChange)="saveMember(true, member.email, $event)"
+                    [disabled]="busy"
+                  >
+                    <option value="viewer">Viewer</option>
+                    <option value="editor">Editor</option>
+                    <option value="admin">Admin</option></select
+                  ><button
+                    class="remove-button"
+                    [disabled]="busy"
+                    (click)="removeMember(true, member.email)"
+                  >
+                    Remove
+                  </button>
+                } @else {
+                  <span class="role-pill">{{ member.role }}</span>
+                }
+              </div>
+            } @empty {
+              <p class="empty-state">
+                {{
+                  busy
+                    ? 'Loading members…'
+                    : memberSearch
+                      ? 'No members match your search.'
+                      : 'No team members yet.'
+                }}
+              </p>
+            }
+          </div>
+          @if (!auth.teamAdmin()) {
+            <p class="empty-state">
+              You can view your teammates. Only team admins can add people, change roles or remove
+              members.
+            </p>
+          }
+        </section>
+      }
+    } @else {
+      <section class="management-card empty-state">
+        <runloom-icon name="building" />
+        <h2>Create your first workspace</h2>
+        <p>An organization brings your teams and workflows together.</p>
+        <button class="primary" (click)="openManagement('organization')">
+          Set up organization
+        </button>
+      </section>
+    }
+  }
+  @if (managementSection === 'analytics') {
+    <runloom-cost-analytics [orgId]="auth.organizationId()" [teamId]="auth.teamId()" />
+  }
+  @if (managementSection === 'connections') {
+    <runloom-connections [orgId]="orgId" [teamId]="teamId" />
+  }
+  @if (managementSection === 'prompts') {
+    <runloom-prompt-library [teamId]="auth.teamId()" />
+  }
+  @if (managementSection === 'runs') {
+    <runloom-run-history [teamId]="auth.teamId()" />
+  }
+  @if (managementSection === 'schedules') {
+    <runloom-schedules [teamId]="auth.teamId()" (viewRun)="openScheduledRun($event)" />
+  }
+  @if (managementSection === 'budgets') {
+    <runloom-budget-policies [orgId]="auth.organizationId()" [teamId]="auth.teamId()" />
+  }
+  @if (managementSection === 'organization') {
+    <runloom-organizations [orgId]="auth.organizationId()" />
+    @if (auth.organization()) {
+      @if (auth.orgAdmin()) {
+        <section class="management-card">
+          <h2>Organization members</h2>
+          <p>
+            Add people by email. They join after verifying their email and signing in. No invitation
+            email is sent.
+          </p>
+          <form class="add-member" (ngSubmit)="saveMember(false, orgEmail, orgRole)">
+            <input
+              name="orgEmail"
+              type="email"
+              aria-label="Organization member email"
+              [(ngModel)]="orgEmail"
+              required
+              placeholder="person@example.com"
+            /><select name="orgRole" aria-label="Organization member role" [(ngModel)]="orgRole">
+              <option value="member">Member</option>
+              <option value="admin">Admin</option>
+              @if (auth.organization()?.role === 'owner') {
+                <option value="owner">Owner</option>
+              }</select
+            ><button class="primary" [disabled]="busy || !orgEmail">Add member</button>
+          </form>
+          <div class="member-toolbar">
+            <h3>
+              Members <span class="count">{{ orgMembers.length }}</span>
+            </h3>
+            <label class="member-search"
+              ><runloom-icon name="search" /><input
+                aria-label="Search organization members"
+                placeholder="Search members"
+                [(ngModel)]="memberSearch"
+            /></label>
+          </div>
+          <div class="member-table" [attr.aria-busy]="busy">
+            @for (member of shownOrgMembers; track member.email) {
+              <div class="member-row">
+                <span class="avatar">{{ initials(member.email) }}</span>
+                <div class="member-identity">
+                  <strong>{{ member.email }}</strong
+                  ><small>{{ member.user_id ? 'Joined' : 'Pending sign-in' }}</small>
+                </div>
+                <select
+                  aria-label="Change organization role"
+                  [ngModel]="member.role"
+                  (ngModelChange)="saveMember(false, member.email, $event)"
+                  [disabled]="
+                    busy || (member.role === 'owner' && auth.organization()?.role !== 'owner')
+                  "
+                >
+                  <option value="member">Member</option>
+                  <option value="admin">Admin</option>
+                  @if (auth.organization()?.role === 'owner' || member.role === 'owner') {
+                    <option value="owner">Owner</option>
+                  }</select
+                ><button
+                  class="remove-button"
+                  [disabled]="
+                    busy || (member.role === 'owner' && auth.organization()?.role !== 'owner')
+                  "
+                  (click)="removeMember(false, member.email)"
+                >
+                  Remove
+                </button>
+              </div>
+            } @empty {
+              <p class="empty-state">
+                {{ busy ? 'Loading members…' : 'No members match your search.' }}
+              </p>
+            }
+          </div>
+        </section>
+      } @else {
+        <section class="management-card">
+          <p>Your organization admin manages members and creates teams.</p>
+        </section>
+      }
+    }
+  }
+  @if (managementSection === 'accounts' || managementSection === 'secrets') {
+    @if (auth.teamAdmin() && auth.teamId()) {
+      <div class="scope-note">
+        <runloom-icon name="team" />Scoped to <strong>{{ auth.team()?.name }}</strong>
+      </div>
+      <section class="management-card">
+        @if (managementSection === 'accounts') {
+          <runloom-service-accounts [teamId]="auth.teamId()" [orgId]="auth.organizationId()" />
+        } @else {
+          <runloom-workflow-secrets [teamId]="auth.teamId()" [orgId]="auth.organizationId()" />
+        }
+      </section>
+    } @else {
+      <section class="management-card">
+        <p>Choose a team where you have admin access to manage these settings.</p>
+      </section>
+    }
+  }
+</main>

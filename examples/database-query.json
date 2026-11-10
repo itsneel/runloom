@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0",
+  "id": "database-customer-lookup",
+  "name": "Look up a customer",
+  "description": "Create a read-only PostgreSQL/Supabase connection named reporting in Management first. The external database needs a customers table with an email column.",
+  "input_schema": {
+    "type": "object",
+    "required": ["email"],
+    "properties": {"email": {"type": "string"}}
+  },
+  "steps": [
+    {
+      "id": "lookup",
+      "type": "database",
+      "database": {
+        "connection_id": "reporting",
+        "operation": "sql",
+        "query": "SELECT email FROM customers WHERE email = $1",
+        "parameters": ["${input.email}"],
+        "limit": 10
+      }
+    }
+  ],
+  "output": "${steps.lookup.output}"
+}

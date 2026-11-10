@@ -1,0 +1,77 @@
+{
+  "realm": "runloom",
+  "displayName": "Runloom",
+  "loginTheme": "runloom",
+  "enabled": true,
+  "registrationAllowed": true,
+  "registrationEmailAsUsername": true,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "verifyEmail": true,
+  "rememberMe": true,
+  "bruteForceProtected": true,
+  "permanentLockout": false,
+  "maxFailureWaitSeconds": 900,
+  "failureFactor": 5,
+  "accessTokenLifespan": 300,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 36000,
+  "revokeRefreshToken": true,
+  "refreshTokenMaxReuse": 0,
+  "passwordPolicy": "length(12) and notUsername(undefined) and notEmail(undefined)",
+  "sslRequired": "external",
+  "smtpServer": {
+    "host": "${RUNLOOM_SMTP_HOST}",
+    "port": "1025",
+    "from": "accounts@runloom.local",
+    "fromDisplayName": "Runloom",
+    "auth": "false",
+    "starttls": "false",
+    "ssl": "false"
+  },
+  "clients": [
+    {
+      "clientId": "runloom",
+      "name": "Runloom Studio",
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "rootUrl": "${RUNLOOM_PUBLIC_URL}",
+      "baseUrl": "${RUNLOOM_PUBLIC_URL}/",
+      "redirectUris": [
+        "${RUNLOOM_PUBLIC_URL}/*"
+      ],
+      "webOrigins": [
+        "${RUNLOOM_PUBLIC_URL}"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "${RUNLOOM_PUBLIC_URL}/*"
+      },
+      "defaultClientScopes": [
+        "basic",
+        "web-origins",
+        "acr",
+        "profile",
+        "email"
+      ],
+      "protocolMappers": [
+        {
+          "name": "runloom-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "runloom",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        }
+      ]
+    }
+  ]
+}

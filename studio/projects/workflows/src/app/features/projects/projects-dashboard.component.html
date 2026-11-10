@@ -1,0 +1,38 @@
+<main class="projects-page" aria-labelledby="projects-heading" [attr.aria-busy]="loading">
+  <button *ngIf="showNavigationToggle" class="navigation-toggle" type="button" aria-label="Toggle workspace sidebar" aria-controls="workspace-sidebar" [attr.aria-expanded]="navigationExpanded" (click)="toggleNavigation.emit()"><runloom-icon name="sidebar" /></button>
+  <header class="page-heading">
+    <div><p class="eyebrow">Workspace / Projects</p><h1 id="projects-heading">Projects</h1><p>Organize your workflows. Open a project to browse its workflows.</p></div>
+    <button class="primary" type="button" [disabled]="!canEdit || busy || loading" (click)="create.emit()"><runloom-icon name="plus" /> New project</button>
+  </header>
+  <section class="library" aria-label="Project folders">
+  <div class="toolbar">
+    <label class="search"><runloom-icon name="search" /><input aria-label="Search projects" type="search" [(ngModel)]="search" placeholder="Search by name or ID" /></label>
+    <button type="button" [disabled]="busy || loading" (click)="reload.emit()">Refresh</button>
+  </div>
+  <section class="empty" role="status" *ngIf="loading"><h2>Loading projects…</h2><p>Getting your team's projects and workflow counts.</p></section>
+  <section class="empty" role="alert" *ngIf="!loading && error"><h2>Could not load projects</h2><p>{{ error }}</p><button type="button" [disabled]="busy" (click)="reload.emit()">Try again</button></section>
+  <ng-container *ngIf="!loading && !error">
+    <ng-container *ngIf="visibleProjects as rows">
+    <div class="table-scroll" *ngIf="rows.length" tabindex="0" role="region" aria-label="Projects table">
+      <table>
+        <caption class="sr-only">Project names, IDs and workflow counts. Open project to browse its workflows.</caption>
+        <thead><tr><th scope="col">Project</th><th scope="col">Workflows</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+        <tbody>
+        <tr *ngFor="let project of rows; trackBy: trackProject">
+          <td><div class="project-identity"><span class="folder-icon"><runloom-icon name="folder" /></span><div><div class="project-name"><strong>{{ project.name }}</strong><span class="badge" *ngIf="project.id === 'default'">Default</span></div><code>{{ project.id }}</code></div></div></td>
+          <td class="workflow-count">{{ count(project.id) }}</td>
+          <td><div class="project-actions">
+          <button type="button" [disabled]="busy" [attr.aria-label]="'Open project ' + project.name" (click)="openProject.emit(project.id)">Open project <runloom-icon name="arrow" /></button>
+          <button *ngIf="canEdit" type="button" [disabled]="busy" [attr.aria-label]="'Rename project ' + project.name" (click)="rename.emit(project.id)"><runloom-icon name="edit" /><span>Rename</span></button>
+          <button *ngIf="canEdit && project.id !== 'default'" class="danger" type="button" [disabled]="busy || count(project.id) > 0" [attr.aria-label]="'Delete project ' + project.name" [title]="count(project.id) > 0 ? 'Move or delete all workflows first' : 'Delete empty project'" (click)="deleteProject.emit(project.id)">Delete</button>
+          </div></td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+    <section class="empty" *ngIf="!rows.length"><h2>{{ search ? 'No matching projects' : 'No projects yet' }}</h2><p>{{ search ? 'Try a different name or project ID.' : 'Create a project to organize your workflows.' }}</p><button *ngIf="search" type="button" (click)="search = ''">Clear search</button></section>
+    <footer *ngIf="rows.length">{{ rows.length }} of {{ projects.length }} projects</footer>
+    </ng-container>
+  </ng-container>
+  </section>
+</main>

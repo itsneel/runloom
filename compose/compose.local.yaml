@@ -1,0 +1,21 @@
+# Explicit local-only tool. Ordinary Compose startup and Helm never seed accounts.
+services:
+  local-admin:
+    profiles: [local-setup]
+    image: ${LOCAL_ADMIN_IMAGE:-runloom-local-admin:local}
+    build:
+      context: ./server/auth
+      dockerfile: Dockerfile.local-admin
+    restart: "no"
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    environment:
+      RUNLOOM_ENV: local
+      RUNLOOM_LOCAL_BOOTSTRAP: "1"
+      RUNLOOM_LOCAL_KEYCLOAK_URL: http://keycloak:8080/auth
+      RUNLOOM_CONFIG_FILE: /etc/runloom/config.yaml
+    configs:
+      - {source: runloom-base, target: /etc/runloom/config.yaml}
+    secrets: [database-url]

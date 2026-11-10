@@ -1,0 +1,27 @@
+# Allow only independently buildable service sources and vendored dependencies.
+**
+!go.mod
+!go.sum
+!LICENSE
+!cmd/
+!cmd/**
+!internal/
+!internal/**
+!vendor/
+!vendor/**
+**/*_test.go
+**/tests/**
+**/__tests__/**
+**/testdata/**
+# Never send local credentials or private keys, even under an allowed tree.
+**/.env
+**/.env.*
+**/.npmrc
+**/.netrc
+**/*.key
+**/*.pem
+**/*.p12
+**/*.pfx
+**/id_rsa*
+**/id_ed25519*
+**/.git

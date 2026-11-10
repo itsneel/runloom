@@ -1,0 +1,9 @@
+GO ?= go
+export GOWORK := off
+.PHONY: build test vet
+build:
+	$(GO) build ./...
+test:
+	$(GO) test -race ./...
+vet:
+	$(GO) vet ./...

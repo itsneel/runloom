@@ -1,0 +1,18 @@
+<fieldset [disabled]="!editable">
+  <label>Task<select aria-label="LLM task" [ngModel]="step.llm_task?.kind || ''" (ngModelChange)="setKind($event)">
+    <option value="">General response</option><option value="extract">Extract typed fields</option><option value="classify">Classify into labels</option><option value="summarize">Summarize</option><option value="sentiment">Analyze sentiment</option>
+  </select></label>
+  <ng-container *ngIf="step.llm_task as task">
+    <label *ngIf="task.kind === 'classify'">Allowed labels, one per line<textarea aria-label="Classification labels" rows="4" [ngModel]="task.labels?.join('\n')" (ngModelChange)="setLabels($event)"></textarea></label>
+    <ng-container *ngIf="task.kind === 'extract'">
+      <section *ngFor="let field of task.fields; let i = index">
+        <label>Field name<input [(ngModel)]="field.name" (ngModelChange)="changed.emit()" /></label>
+        <label>Type<select [(ngModel)]="field.type" (ngModelChange)="changed.emit()"><option value="string">Text</option><option value="number">Number</option><option value="integer">Integer</option><option value="boolean">Boolean</option></select></label>
+        <label>What to extract<input [(ngModel)]="field.description" (ngModelChange)="changed.emit()" /></label>
+        <button type="button" (click)="removeField(i)">Remove field</button>
+      </section>
+      <button type="button" (click)="addField()">Add extraction field</button>
+    </ng-container>
+    <p>Typed results are in <code>$&#123;steps.{{step.id}}.output.data&#125;</code>. The backend rejects invalid results. Missing extraction values or unknown classifications must request human review. Add a Condition and Approval to enforce that review before downstream actions.</p>
+  </ng-container>
+</fieldset>

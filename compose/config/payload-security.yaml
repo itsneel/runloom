@@ -1,0 +1,2 @@
+RUNLOOM_PAYLOAD_KEYRING_FILE: /run/secrets/payload-keyring
+RUNLOOM_ALLOW_LEGACY_PAYLOADS: "false"

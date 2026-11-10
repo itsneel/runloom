@@ -1,0 +1,11 @@
+{
+  "RUNLOOM_WORKER_HEALTH_ADDRESS": "0.0.0.0:8081",
+  "RUNLOOM_LLM_BASE_URL": "https://api.openai.com/v1",
+  "RUNLOOM_LLM_DEFAULT_MODEL": "",
+  "RUNLOOM_LLM_PROVIDER": "openai-compatible",
+  "RUNLOOM_LLM_API_KEY_FILE": "/run/secrets/llm-api-key",
+  "RUNLOOM_SMTP_HOST": "mailpit",
+  "RUNLOOM_SMTP_PORT": "1025",
+  "RUNLOOM_SMTP_FROM": "noreply@runloom.test",
+  "RUNLOOM_SMTP_TLS": "none"
+}

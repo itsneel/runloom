@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0",
+  "kind": "child",
+  "id": "reusable-greeting",
+  "name": "Reusable greeting",
+  "trigger": { "type": "manual" },
+  "input_schema": { "type": "object", "required": ["name"], "properties": { "name": { "type": "string", "minLength": 1 } } },
+  "steps": [
+    { "id": "greeting", "type": "activity", "activity": "runloom.echo", "with": { "message": "Hello, ${input.name}!" } }
+  ],
+  "output": "${steps.greeting.output}"
+}

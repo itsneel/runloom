@@ -1,0 +1,56 @@
+# Enable using SERVICES_OBSERVABILITY=1 with the independent-services helper.
+# These companions share each app's network namespace, like Kubernetes sidecars.
+x-collector: &collector
+  image: otel/opentelemetry-collector-contrib:0.162.0
+  user: "65532:65532"
+  command: ["--config=/etc/otel/config.yaml"]
+  restart: unless-stopped
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  mem_limit: 128m
+  cpus: 0.2
+  tmpfs: ["/var/log/telemetry:uid=65532,gid=65532,mode=0700,size=67108864"]
+  volumes:
+    - ./compose/config/collector.yaml:/etc/otel/config.yaml:ro
+services:
+  telemetry-api:
+    <<: *collector
+    network_mode: service:api
+    depends_on: {api: {condition: service_started}}
+  telemetry-auth:
+    <<: *collector
+    network_mode: service:auth
+    depends_on: {auth: {condition: service_started}}
+  telemetry-workflows:
+    <<: *collector
+    network_mode: service:workflows
+    depends_on: {workflows: {condition: service_started}}
+  telemetry-management:
+    <<: *collector
+    network_mode: service:management
+    depends_on: {management: {condition: service_started}}
+  telemetry-worker:
+    <<: *collector
+    network_mode: service:worker
+    depends_on: {worker: {condition: service_started}}
+  telemetry-assistant:
+    <<: *collector
+    network_mode: service:assistant
+    depends_on: {assistant: {condition: service_started}}
+  prometheus:
+    image: prom/prometheus:v3.10.0
+    user: "65534:65534"
+    command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.path=/prometheus", "--storage.tsdb.retention.time=7d", "--storage.tsdb.retention.size=3GB"]
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    ports: ["127.0.0.1:${PROMETHEUS_PORT:-39090}:9090"]
+    mem_limit: 512m
+    cpus: 0.5
+    volumes:
+      - ./compose/config/prometheus.yaml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+volumes:
+  prometheus-data:

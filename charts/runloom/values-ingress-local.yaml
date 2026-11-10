@@ -1,0 +1,11 @@
+# Overlay only: keep your existing database, identity and image values.
+# Requires a separately installed controller and coordinated Keycloak URL settings.
+auth:
+  publicURL: https://studio.runloom.dev
+ingress:
+  enabled: true
+  className: runloom-nginx
+  host: studio.runloom.dev
+  tls:
+    - secretName: runloom-local-tls
+      hosts: [studio.runloom.dev]

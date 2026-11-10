@@ -1,0 +1,5 @@
+# Alternate server entry point; the complete stack lives beside this file.
+name: runloom
+include:
+  - path: compose/compose.yaml
+    project_directory: .

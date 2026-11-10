@@ -1,0 +1,10 @@
+<p>JavaScript only. Read <code>input</code> and <code>return</code> a JSON value. Source is literal; JavaScript template strings are not workflow expressions.</p>
+    <label><span>JavaScript code</span><textarea aria-label="JavaScript code" spellcheck="false" rows="12" [disabled]="!editable" [ngModel]="step.code?.source || ''" (ngModelChange)="setSource($event)"></textarea></label>
+    <p>5 seconds · 32 MiB JS heap · 64 MiB WebAssembly memory. No TypeScript, npm, network, filesystem, secrets or asynchronous return values. Use External API nodes for API calls.</p>
+    <label><span>Sample input (JSON object)</span><textarea aria-label="JavaScript sample input" spellcheck="false" rows="5" [disabled]="!editable" [(ngModel)]="sample"></textarea></label>
+    <p>Sample input is passed directly as <code>input</code>, without resolving workflow mappings. Testing does not save or publish your workflow. Sample input is temporary.</p>
+    <button type="button" [disabled]="busy || !editable" (click)="test()">{{ busy ? 'Testing JavaScript…' : 'Test JavaScript' }}</button>
+    <ng-container *ngIf="result && result.signature === signature">
+      <p>{{ result.error ? 'Test failed' : 'Test output' }}</p>
+      <pre aria-label="JavaScript test result" role="status" [class.error]="result.error">{{ result.text }}</pre>
+    </ng-container>
