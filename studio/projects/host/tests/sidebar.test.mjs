@@ -13,6 +13,9 @@ test('Documentation sits in the footer immediately above Appearance and opens a 
   assert.match(footer, /aria-label="Consumer API documentation"[\s\S]*?openDocumentation\('consumer'\)[\s\S]*?aria-label="Documentation"/);
   assert.match(footer, /aria-label="Documentation"[\s\S]*?<\/button>\s*<runloom-theme-picker/);
   assert.match(footer, /<svg class="documentation-icon"[^>]*aria-hidden="true"[^>]*focusable="false"/);
+  for (const label of ['Consumer API docs', 'Documentation']) {
+    assert.ok(footer.includes(`<span class="nav-text">${label}<ng-container *ngTemplateOutlet="externalLinkIcon" /></span>`));
+  }
   assert.match(shellFile('scss'), /\.sidebar-collapsed \.documentation-link\s*\{\s*justify-content: center;/);
   assert.equal(template.match(/aria-label="Documentation"/g)?.length, 1);
   assert.match(template, /\(click\)="openDocumentation\(\)"/);
@@ -22,7 +25,8 @@ test('Documentation sits in the footer immediately above Appearance and opens a 
 
 test('Management is a static heading with permanently rendered navigation', () => {
   const template = shellFile('html');
-  assert.match(template, /<h2 class="management-heading nav-label">Management<\/h2>/);
+  assert.match(template, /<h2 id="workspace-heading" class="section-heading nav-label">Workspace<\/h2>/);
+  assert.match(template, /<h2 class="section-heading nav-label">Management<\/h2>/);
   assert.match(template, /<div id="management-links" class="management-links">/);
   assert.doesNotMatch(template, /management-toggle|management-chevron|managementExpanded/);
   assert.doesNotMatch(shellFile('ts'), /managementExpanded/);

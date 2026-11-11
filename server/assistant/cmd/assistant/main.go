@@ -13,8 +13,6 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
-	"strconv"
-	"strings"
 	"syscall"
 	"time"
 )
@@ -47,22 +45,7 @@ func run() error {
 	}
 	clientID := config.Value("RUNLOOM_OIDC_CLIENT_ID")
 	verifier := auth.New(ctx, auth.Config{Issuer: config.Value("RUNLOOM_OIDC_ISSUER"), JWKSURL: config.Value("RUNLOOM_OIDC_JWKS_URL"), Audience: clientID, ClientID: clientID, Kind: auth.Human, RequiredACR: config.Value("RUNLOOM_OIDC_REQUIRED_ACR"), MaxAuthAge: age})
-	key := ""
-	if path := config.Value("RUNLOOM_ASSISTANT_API_KEY_FILE"); path != "" {
-		data, e := os.ReadFile(path)
-		if e != nil || len(data) > 65536 {
-			return errors.New("cannot read assistant credential file")
-		}
-		key = strings.TrimSpace(string(data))
-	}
-	maxTokens := 2048
-	if value := config.Value("RUNLOOM_ASSISTANT_MAX_TOKENS"); value != "" {
-		maxTokens, err = strconv.Atoi(value)
-		if err != nil {
-			return err
-		}
-	}
-	provider, err := chat.NewProvider(config.Value("RUNLOOM_ASSISTANT_PROVIDER"), config.Value("RUNLOOM_ASSISTANT_BASE_URL"), config.Value("RUNLOOM_ASSISTANT_MODEL"), key, config.Value("RUNLOOM_ASSISTANT_ALLOW_HTTP") == "true", maxTokens)
+	provider, err := chat.ConfiguredProvider(config.Value)
 	if err != nil {
 		return err
 	}

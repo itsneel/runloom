@@ -21,7 +21,7 @@
   },
   "docs/assistant.md": {
     "destination": "content/imported/assistant.md",
-    "sha256": "bc1c8965077e73ed271560bceb96efef81ec8bc11053e268d90f160055569269"
+    "sha256": "bfba536aec9d048beb5207265057c79e3692576696b7f8ade4f7b01bef7cddea"
   },
   "docs/database-connections.md": {
     "destination": "content/imported/database-connections.md",
@@ -137,7 +137,7 @@
   },
   "server/assistant/internal/chat/guardrails.txt": {
     "destination": "content/sources/server/assistant/internal/chat/guardrails.txt",
-    "sha256": "2207ebb69b1166217c7f9ceb63abab8866612ca2e149315c526fa823e59da00a"
+    "sha256": "be9a192a8fccc1a72746be003710ef6090c0864fbc669498c2722814b3e1bed3"
   },
   "server/assistant/api/openapi.yaml": {
     "destination": "content/sources/server/assistant/api/openapi.yaml",

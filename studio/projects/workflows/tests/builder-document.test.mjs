@@ -32,6 +32,7 @@ function builder(overrides = {}, confirm = async () => true) {
       '../../core/api/workflow-api.service': {WorkflowApiService: 'api'},
     },
     globals: {
+      Node: class {},
       document: {querySelector: () => null},
       setTimeout: callback => { const id = Symbol(); timers.set(id, callback); return id; },
       clearTimeout: id => timers.delete(id),
@@ -362,4 +363,38 @@ test('Lumi waits for an in-flight save and refuses a workflow switch during prep
  app.versions.saving=false;for(const [id,run] of [...timers]){timers.delete(id);run();}await pending;
  app.versions.saving=true;const switched=app.prepareAuthoringDraft();app.documentGeneration++;app.versions.saving=false;
  for(const [id,run] of [...timers]){timers.delete(id);run();}await assert.rejects(switched);
+});
+
+test('canvas shortcuts use enabled actions and ignore typing, repeats and modified keys', async () => {
+  const {app} = builder();
+  app.builderOpen = true;
+  const clicked = [];
+  let disabled = false;
+  app.host = {nativeElement: {querySelector(selector) {
+    return selector.startsWith('button') ? {disabled, click: () => clicked.push(selector)} : null;
+  }}};
+  app.changeDetector.detectChanges = () => {};
+  const press = (key, options = {}) => app.canvasShortcut({key, preventDefault() {}, ...options});
+  for (const key of ['e', 'a', 't', 'h', '?']) await press(key);
+  for (const options of [{target: {tagName: 'INPUT'}}, {repeat: true}, {ctrlKey: true}, {shiftKey: true}]) {
+    await press('e', options);
+  }
+  disabled = true;
+  await press('e');
+  assert.deepEqual(clicked, ['E', 'A', 'T', 'H', '?'].map(key => `button[aria-keyshortcuts="${key}"]`));
+});
+
+test('keyboard publication requires confirmation for the same workflow', async () => {
+  for (const decision of ['cancel', 'accept', 'changed']) {
+    const {app} = builder({}, async message => {
+      assert.ok(message.includes(app.definition.name));
+      if (decision === 'changed') app.definition.name += ' edited';
+      return decision !== 'cancel';
+    });
+    app.builderOpen = true;
+    let clicks = 0;
+    app.host = {nativeElement: {querySelector: () => ({isConnected: true, click: () => clicks++})}};
+    await app.canvasShortcut({key: 'P', shiftKey: true, preventDefault() {}});
+    assert.equal(clicks, decision === 'accept' ? 1 : 0);
+  }
 });

@@ -43,7 +43,11 @@ try {
   await page.getByRole('button', {name: 'Details for Autosave example', exact: true}).click();
   const name = page.getByLabel('Workflow name', {exact: true});
   assert(await name.isDisabled());
-  await page.getByRole('button', {name: 'Edit workflow', exact: true}).click();
+  // Opening Details leaves focus on the page, outside the graph.
+  await page.keyboard.press('?');
+  await page.getByRole('dialog', {name: 'Keyboard shortcuts'}).waitFor();
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('e');
   await name.fill('Automatically saved');
   await page.waitForFunction(() => document.querySelector('.unsaved-indicator')?.textContent.trim() === 'Saved');
   assert.equal(definition.name, 'Automatically saved'); assert.equal(writes, 1);

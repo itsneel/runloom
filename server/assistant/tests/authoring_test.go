@@ -346,8 +346,9 @@ func TestGeminiToolStopFinishReason(t *testing.T) {
 }
 
 func TestGeminiStructuredWorkflowValidationRepair(t *testing.T) {
-	for _, repairSucceeds := range []bool{true, false} {
-		t.Run(fmt.Sprint(repairSucceeds), func(t *testing.T) {
+	for _, tc := range []struct{ autoSave, repairSucceeds bool }{{false, true}, {false, false}, {true, true}, {true, false}} {
+		autoSave, repairSucceeds := tc.autoSave, tc.repairSucceeds
+		t.Run(fmt.Sprint(tc), func(t *testing.T) {
 			p, _ := chat.NewProvider("openai-compatible", "https://generativelanguage.googleapis.com/v1beta/openai", "synthetic", "", false, 4096)
 			calls := 0
 			p.Client = &http.Client{Transport: providerRequestTransport(func(r *http.Request) (*http.Response, error) {
@@ -359,8 +360,12 @@ func TestGeminiStructuredWorkflowValidationRepair(t *testing.T) {
 				tools := body["tools"].([]any)
 				function := tools[0].(map[string]any)["function"].(map[string]any)
 				parameters := function["parameters"].(map[string]any)
-				if parameters["properties"].(map[string]any)["workflow_json"].(map[string]any)["type"] != "object" {
-					t.Error("Gemini needs structured workflow input")
+				expectedType := "object"
+				if autoSave && calls == 2 {
+					expectedType = "string"
+				}
+				if parameters["properties"].(map[string]any)["workflow_json"].(map[string]any)["type"] != expectedType {
+					t.Errorf("call %d expected workflow_json of type %s", calls, expectedType)
 				}
 				if calls == 2 && !strings.Contains(fmt.Sprint(body["messages"]), "Validation feedback:") {
 					t.Error("repair must receive validation feedback")
@@ -368,14 +373,28 @@ func TestGeminiStructuredWorkflowValidationRepair(t *testing.T) {
 				end := map[string]any{"id": "done", "type": "end"}
 				if calls == 1 || !repairSucceeds {
 					end["invented_field"] = "unsupported node field"
+					if autoSave {
+						end = map[string]any{"id": "send-approval,timeout_seconds:86400,type:", "type": "approval"}
+					}
 				}
 				definition := map[string]any{"schema_version": "1.0", "id": "test", "name": "Test", "kind": "main", "trigger": map[string]any{"type": "manual"}, "steps": []any{end}}
-				args, _ := json.Marshal(map[string]any{"operation": "create", "workflow_json": definition})
+				var wire any = definition
+				if autoSave && calls == 2 {
+					if !strings.Contains(fmt.Sprint(body["messages"]), "missing property 'prompt'") {
+						t.Error("missing node diagnosis")
+					}
+					if repairSucceeds {
+						definition["steps"] = []any{map[string]any{"id": "send-approval", "type": "approval", "prompt": "Approve the request?", "timeout_seconds": 86400}}
+					}
+					raw, _ := json.Marshal(definition)
+					wire = string(raw)
+				}
+				args, _ := json.Marshal(map[string]any{"operation": "create", "workflow_json": wire})
 				chunk, _ := json.Marshal(map[string]any{"choices": []any{map[string]any{"delta": map[string]any{"tool_calls": []any{map[string]any{"id": "call1", "type": "function", "function": map[string]string{"name": "propose_workflow", "arguments": string(args)}}}}}}})
 				return &http.Response{StatusCode: 200, Header: make(http.Header), Body: io.NopCloser(strings.NewReader("data: " + string(chunk) + "\n\ndata: {\"choices\":[{\"delta\":{},\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n"))}, nil
 			})}
 			var proposal *chat.Proposal
-			err := p.StreamAuthoring(context.Background(), chat.Scope{}, &chat.AuthoringContext{AuthoringVersion: 2, Revision: strings.Repeat("a", 64), Workflows: json.RawMessage(`[]`)}, nil, func(string) error { return nil }, func(v *chat.Proposal) { proposal = v })
+			err := p.StreamAuthoring(context.Background(), chat.Scope{}, &chat.AuthoringContext{SaveDraft: autoSave, AuthoringVersion: 2, Revision: strings.Repeat("a", 64), Workflows: json.RawMessage(`[]`)}, nil, func(string) error { return nil }, func(v *chat.Proposal) { proposal = v })
 			if calls != 2 {
 				t.Fatalf("expected one repair, got %d model calls", calls)
 			}

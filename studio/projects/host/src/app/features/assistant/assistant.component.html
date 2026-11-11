@@ -39,7 +39,7 @@
         <article class="message" [class.from-user]="message.role === 'user'" [class.pending-message]="!!message.delivery" [class.is-entering]="message.role === 'user' && enteringMessages().has(message.request_id || '')" [attr.data-request-id]="message.request_id || null" (animationend)="finishMessageEntrance($event, message.request_id)" (animationcancel)="finishMessageEntrance($event, message.request_id)">
           <div class="message-meta"><strong>{{ message.role === 'user' ? 'You' : 'Lumi' }}</strong><time>{{ message.created_at | date:'shortTime' }}</time></div>
           @if (message.role === 'user') {
-            <small class="delivery-state" role="status">{{ message.delivery ? (chat.conversationLimit() ? 'Not sent · conversation limit reached' : message.delivery.state === 'failed' ? 'Delivery stopped' : message.delivery.state === 'sending' ? 'Sending…' : chat.deliveryBlocked() ? 'Blocked by an earlier delivery error' : 'Waiting to send…') : 'Saved · ' + chat.jobFor(message.job_id)?.status }}</small>
+            <small class="delivery-state" role="status">{{ message.delivery ? (chat.conversationLimit() ? 'Not sent · conversation limit reached' : message.delivery.state === 'failed' ? 'Delivery stopped' : message.delivery.state === 'sending' ? 'Sending…' : chat.deliveryBlocked() ? 'Blocked by an earlier delivery error' : 'Waiting to send…') : 'Message saved' }}</small>
           }
           @if (message.content) { <p>{{ message.content }}</p> }
           @if (message.role === 'assistant') {
@@ -99,7 +99,7 @@
       @if (chat.current()?.jobs?.length) {
         <details class="jobs"><summary>Authoring jobs ({{ chat.current()!.jobs.length }})</summary>
           @for (job of chat.current()!.jobs; track job.id) {
-            <div class="job"><strong>{{ job.model ? 'Planning' : 'Configuration notice' }} · {{ job.status }}</strong><small>{{ job.model || 'No model called' }}</small>@if (job.error) { <p>{{ job.error }}</p> }</div>
+            <div class="job"><strong>{{ job.kind === 'approval_starter' ? 'Approval starter' : job.model ? 'Planning' : 'Configuration notice' }} · {{ job.status }}</strong><small>{{ job.model || 'No model called' }}</small>@if (job.error) { <p>{{ job.error }}</p> }</div>
           }
         </details>
       }

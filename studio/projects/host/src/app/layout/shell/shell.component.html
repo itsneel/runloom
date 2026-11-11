@@ -83,7 +83,8 @@
         </button>
       </div>
       <div class="sidebar-navigation" (scroll)="refreshRailTooltip()">
-      <nav class="primary-navigation" aria-label="Workspace">
+      <nav class="primary-navigation" aria-labelledby="workspace-heading">
+        <h2 id="workspace-heading" class="section-heading nav-label">Workspace</h2>
         <button
           [class.active]="!manage && !projectsView && auth.team()"
           [attr.aria-current]="!manage && !projectsView && auth.team() ? 'page' : null"
@@ -115,7 +116,7 @@
         }
       </nav>
       <nav class="admin-navigation" aria-label="Manage workspace">
-        <h2 class="management-heading nav-label">Management</h2>
+        <h2 class="section-heading nav-label">Management</h2>
         <div id="management-links" class="management-links">
         <div class="management-group" role="group" aria-labelledby="management-workflows-heading">
         <h3 id="management-workflows-heading" class="nav-label management-group-heading">Workflow operations</h3>
@@ -185,18 +186,23 @@
       </nav>
       </div>
       <div class="sidebar-footer">
+      <ng-template #externalLinkIcon>
+        <svg class="external-link-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+          <path d="M9 2.5h4.5V7M13.5 2.5 7 9M6 3.5H4a1.5 1.5 0 0 0-1.5 1.5v7A1.5 1.5 0 0 0 4 13.5h7a1.5 1.5 0 0 0 1.5-1.5v-2" />
+        </svg>
+      </ng-template>
       <button type="button" class="documentation-link" aria-label="Consumer API documentation" title="Open Consumer API documentation in a new tab" (click)="openDocumentation('consumer')">
         <svg class="documentation-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6Z" />
           <path d="M14 2v6h6M8 13h8M8 17h5" />
         </svg>
-        <span class="nav-text">Consumer API docs</span>
+        <span class="nav-text">Consumer API docs<ng-container *ngTemplateOutlet="externalLinkIcon" /></span>
       </button>
       <button type="button" class="documentation-link" aria-label="Documentation" title="Open documentation in a new tab" (click)="openDocumentation()">
         <svg class="documentation-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
           <path d="M12 5v15M12 5C9 3 5 3 2 4v15c3-1 7-1 10 1 3-2 7-2 10-1V4c-3-1-7-1-10 1Z" />
         </svg>
-        <span class="nav-text">Documentation</span>
+        <span class="nav-text">Documentation<ng-container *ngTemplateOutlet="externalLinkIcon" /></span>
       </button>
       <runloom-theme-picker [compact]="sidebarCollapsed && !mobileViewport" />
       <div class="sidebar-profile">
