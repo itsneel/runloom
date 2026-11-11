@@ -98,6 +98,8 @@
           class="version-pill"
           type="button"
           [class.published]="definition.version > 0"
+          aria-keyshortcuts="H"
+          title="History (H)"
           (click)="versions.openVersions()"
         >
           {{ publishLabel }} · History
@@ -141,6 +143,8 @@
           class="plain-button"
           type="button"
           aria-haspopup="dialog"
+          aria-keyshortcuts="?"
+          title="Keyboard shortcuts (?)"
           (click)="shortcuts.showModal()"
         >
           Keyboard shortcuts
@@ -162,18 +166,31 @@
           [disabled]="
             versions.saving || projectBusy || !edit.canEditWorkflow || !!draftValidationError
           "
+          aria-keyshortcuts="Shift+P"
+          title="Publish (Shift+P)"
           (click)="versions.publish()"
         >
           Publish
         </button>
-        <button class="test-button" type="button" (click)="testRun.openRun()">
+        <button
+          class="test-button"
+          type="button"
+          aria-keyshortcuts="T"
+          title="Test workflow (T)"
+          (click)="testRun.openRun()"
+        >
           <runloom-icon name="play" />
           {{ definition.kind === 'child' ? 'Test child workflow' : 'Test workflow' }}
         </button>
       </div>
     </header>
 
-    <div class="edit-lock-banner interrupted" role="status" *ngIf="draftValidationError">
+    <div
+      class="edit-lock-banner interrupted validation-summary"
+      tabindex="-1"
+      role="status"
+      *ngIf="draftValidationError"
+    >
       <span class="edit-lock-copy"
         ><strong>Draft needs attention — publishing is blocked</strong
         ><span>{{ draftValidationError }}</span
@@ -216,6 +233,8 @@
         type="button"
         *ngIf="auth.canEdit() && !edit.ownsEdit"
         [disabled]="edit.acquiringEdit || versions.saving || projectBusy"
+        aria-keyshortcuts="E"
+        title="Edit workflow (E)"
         (click)="edit.editWorkflow()"
       >
         {{ edit.acquiringEdit ? 'Opening editor…' : 'Edit workflow' }}
@@ -232,6 +251,8 @@
     </div>
 
     <runloom-notice
+      class="builder-notice"
+      tabindex="-1"
       *ngIf="message && !jsonOpen && !testRun.runOpen && !versions.versionOpen"
       [message]="message"
       [tone]="messageError ? 'error' : 'success'"
@@ -263,14 +284,16 @@
             <button
               [disabled]="!edit.canEditWorkflow || versions.saving"
               type="button"
-              title="Check workflow"
+              aria-keyshortcuts="V"
+              title="Check workflow (V)"
               (click)="validate()"
             >
               <runloom-icon name="check" /> Check</button
             ><button
               [disabled]="!edit.canEditWorkflow || versions.saving"
               type="button"
-              title="Add node"
+              aria-keyshortcuts="A"
+              title="Add node (A)"
               (click)="editor.openNodePicker()"
             >
               <runloom-icon name="plus" /> Add node
@@ -2011,7 +2034,10 @@
   aria-describedby="shortcuts-description"
 >
   <h2 id="shortcuts-title">Keyboard shortcuts</h2>
-  <p id="shortcuts-description">Use Command (⌘) on macOS and Ctrl on Windows or Linux.</p>
+  <p id="shortcuts-description">
+    Use these shortcuts anywhere in the open workflow builder outside text fields and dialogs. Use Command (⌘) on macOS and Ctrl on
+    Windows or Linux.
+  </p>
   <table>
     <caption>
       Workflow builder shortcuts
@@ -2024,6 +2050,34 @@
       </tr>
     </thead>
     <tbody>
+      <tr>
+        <th scope="row">Start editing</th>
+        <td colspan="2">E</td>
+      </tr>
+      <tr>
+        <th scope="row">Confirm publication</th>
+        <td colspan="2">Shift + P</td>
+      </tr>
+      <tr>
+        <th scope="row">Search nodes to add</th>
+        <td colspan="2">A</td>
+      </tr>
+      <tr>
+        <th scope="row">Check workflow</th>
+        <td colspan="2">V</td>
+      </tr>
+      <tr>
+        <th scope="row">Open test inputs</th>
+        <td colspan="2">T</td>
+      </tr>
+      <tr>
+        <th scope="row">Open history</th>
+        <td colspan="2">H</td>
+      </tr>
+      <tr>
+        <th scope="row">Show keyboard shortcuts</th>
+        <td colspan="2">?</td>
+      </tr>
       <tr>
         <th scope="row">Undo workflow edit</th>
         <td>Ctrl + Z</td>

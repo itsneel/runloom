@@ -657,6 +657,12 @@ build-assistant:
 	$(MAKE) -C server/assistant build
 test-assistant:
 	$(MAKE) -C server/assistant test
+.PHONY: eval-lumi eval-lumi-live
+eval-lumi:
+	cd server/assistant && GOWORK=off RUNLOOM_LUMI_EVAL_LIVE=0 $(GO) test -mod=vendor -count=1 -v ./internal/chat -run '^TestLumiWorkflowEval$$'
+eval-lumi-live:
+	cd server/assistant && GOWORK=off RUNLOOM_LUMI_EVAL_LIVE=1 $(GO) test -mod=vendor -count=1 -timeout=30m -v ./internal/chat -run '^TestLumiWorkflowEval$$'
+
 .PHONY: test-assistant-live
 test-assistant-live:
 	$(MAKE) -C tools/database-setup docker-build

@@ -21,6 +21,7 @@ import { CommonModule } from '@angular/common';
 import {
   ChangeDetectorRef,
   Component,
+  ElementRef,
   EventEmitter,
   HostListener,
   inject,
@@ -107,7 +108,105 @@ export class App implements OnInit, OnDestroy {
     void this.edit.refreshEditLock();
   }
 
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+
   @HostListener('document:keydown', ['$event'])
+  onBuilderKeydown(event: KeyboardEvent): void {
+    if (event.ctrlKey || event.metaKey) {
+      this.saveShortcut(event);
+      this.historyShortcut(event);
+    } else {
+      void this.canvasShortcut(event);
+    }
+  }
+
+  async canvasShortcut(event: KeyboardEvent): Promise<void> {
+    if (!this.builderOpen) return;
+    const target = event.composedPath?.()[0] ?? event.target;
+    if (target instanceof Node && target !== document.body && target !== document.documentElement &&
+        !this.host.nativeElement.contains(target)) return;
+    if (
+      event.defaultPrevented ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.altKey ||
+      event.repeat ||
+      event.isComposing ||
+      this.jsonOpen ||
+      this.versions.versionOpen ||
+      this.testRun.runOpen ||
+      document.querySelector('dialog[open]') ||
+      isTextEditingTarget(event.composedPath?.()[0] ?? event.target)
+    )
+      return;
+
+    const key =
+      event.key === '?'
+        ? '?'
+        : event.shiftKey
+          ? event.key.toLowerCase() === 'p'
+            ? 'Shift+P'
+            : ''
+          : event.key.toUpperCase();
+    if (!['E', 'Shift+P', 'A', 'V', 'T', 'H', '?'].includes(key)) return;
+    const root = this.host.nativeElement;
+    const button = root.querySelector<HTMLButtonElement>(`button[aria-keyshortcuts="${key}"]`);
+    if (!button || button.disabled) return;
+    event.preventDefault();
+
+    if (key === 'Shift+P') {
+      const generation = this.documentGeneration;
+      const snapshot = this.editSnapshot();
+      const confirmed = await this.dialogs.confirm(
+        `Publish “${this.definition.name}” as a new version?`,
+        { title: 'Publish workflow?', confirmText: 'Publish' },
+      );
+      if (
+        !confirmed ||
+        this.destroyed ||
+        generation !== this.documentGeneration ||
+        snapshot !== this.editSnapshot() ||
+        !button.isConnected ||
+        button.disabled ||
+        this.versions.saving ||
+        this.projectBusy ||
+        this.draftValidationError ||
+        !this.edit.canEditWorkflow
+      )
+        return;
+    }
+    if (key === 'V') {
+      const target = document.activeElement;
+      const generation = this.documentGeneration;
+      if (
+        !(await this.validate()) &&
+        !this.destroyed &&
+        generation === this.documentGeneration &&
+        target === document.activeElement
+      ) {
+        this.changeDetector.detectChanges();
+        const issue =
+          root.querySelector<HTMLElement>('.node-select[aria-invalid="true"]') ??
+          root.querySelector<HTMLElement>('.validation-summary, .builder-notice');
+        issue?.focus();
+      }
+      return;
+    }
+    button.click();
+    const focusSelector =
+      key === 'A'
+        ? '.picker-search input'
+        : key === 'T'
+          ? '.run-drawer.open:not(.version-drawer) .field :is(input, select, textarea)'
+          : key === 'H'
+            ? '.version-drawer .drawer-head button'
+            : '';
+    if (focusSelector) {
+      this.changeDetector.detectChanges();
+      root.querySelector<HTMLElement>(focusSelector)?.focus();
+    }
+  }
+
   saveShortcut(event: KeyboardEvent): void {
     if (
       !(event.metaKey || event.ctrlKey) ||
@@ -131,7 +230,6 @@ export class App implements OnInit, OnDestroy {
     void this.versions.save();
   }
 
-  @HostListener('document:keydown', ['$event'])
   historyShortcut(event: KeyboardEvent): void {
     if (
       event.defaultPrevented ||

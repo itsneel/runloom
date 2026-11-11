@@ -24,7 +24,9 @@ Implemented source behavior verified on 2026-11-09 with the workflows applicatio
 | Redo workflow edit | Ctrl + Shift + Z | Command + Shift + Z |
 | Save draft immediately | Ctrl + S | Command + S |
 
-In text inputs, textareas, editable content and code editors, undo/redo retain their native text-editing behavior. Workflow shortcuts do not run behind an open dialog, in read-only mode, during a save, or while node JSON is invalid. **Save** remains subject to editing access and unfinished-JSON checks. The shortcut guide and toolbar buttons provide discoverable alternatives to memorizing shortcuts.
+In text inputs, textareas, editable content and code editors, undo/redo retain their native text-editing behavior. Workflow undo and redo do not run behind an open dialog, in read-only mode, during a save, or while node JSON is invalid. **Save** remains subject to editing access and unfinished-JSON checks. The shortcut guide and toolbar buttons provide discoverable alternatives to memorizing shortcuts.
+
+With a workflow open and focus outside text fields and dialogs, press **E** to start editing, **Shift + P** to review and confirm publication, **A** to search for a node, or **V** to check the draft. Press **T** to review test inputs, **H** to open History, or **?** to open the keyboard guide. These keys follow the corresponding button’s availability. Opening test inputs leaves execution under your control.
 
 ## Visual graph and parallel paths
 

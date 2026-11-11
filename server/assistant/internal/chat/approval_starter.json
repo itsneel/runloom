@@ -1,0 +1,134 @@
+{
+  "schema_version": "1.0",
+  "id": "approval-reminders",
+  "name": "Approval with reminders and escalation",
+  "kind": "main",
+  "trigger": {
+    "type": "manual"
+  },
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "request": {
+        "type": "string",
+        "minLength": 1
+      },
+      "approver_email": {
+        "type": "string",
+        "minLength": 1
+      },
+      "escalation_email": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "request",
+      "approver_email",
+      "escalation_email"
+    ]
+  },
+  "steps": [
+    {
+      "id": "notify-reviewer",
+      "type": "email",
+      "email": {
+        "to": [
+          "${input.approver_email}"
+        ],
+        "subject": "Approval requested",
+        "text": "Review the pending request in Runloom Studio: ${input.request}"
+      }
+    },
+    {
+      "id": "initial-review",
+      "type": "approval",
+      "prompt": "Approve this request? ${input.request}",
+      "timeout_seconds": 86400,
+      "on_timeout": "reject"
+    },
+    {
+      "id": "initial-response",
+      "type": "condition",
+      "if": {
+        "left": "${steps.initial-review.output.actor}",
+        "operator": "not_equals",
+        "right": "system"
+      },
+      "then": [
+        {
+          "id": "finish-initial-review",
+          "type": "end",
+          "with": {
+            "approved": "${steps.initial-review.output.approved}",
+            "actor": "${steps.initial-review.output.actor}",
+            "comment": "${steps.initial-review.output.comment}"
+          }
+        }
+      ]
+    },
+    {
+      "id": "send-reminder",
+      "type": "email",
+      "email": {
+        "to": [
+          "${input.approver_email}"
+        ],
+        "subject": "Reminder: approval pending",
+        "text": "Your review is still pending for ${input.request}."
+      }
+    },
+    {
+      "id": "reminder-review",
+      "type": "approval",
+      "prompt": "Reminder: approve this request? ${input.request}",
+      "timeout_seconds": 86400,
+      "on_timeout": "reject"
+    },
+    {
+      "id": "reminder-response",
+      "type": "condition",
+      "if": {
+        "left": "${steps.reminder-review.output.actor}",
+        "operator": "not_equals",
+        "right": "system"
+      },
+      "then": [
+        {
+          "id": "finish-reminder-review",
+          "type": "end",
+          "with": {
+            "approved": "${steps.reminder-review.output.approved}",
+            "actor": "${steps.reminder-review.output.actor}",
+            "comment": "${steps.reminder-review.output.comment}"
+          }
+        }
+      ]
+    },
+    {
+      "id": "send-escalation",
+      "type": "email",
+      "email": {
+        "to": [
+          "${input.escalation_email}"
+        ],
+        "subject": "Escalated approval request",
+        "text": "The request still needs a decision after a reminder: ${input.request}."
+      }
+    },
+    {
+      "id": "escalated-review",
+      "type": "approval",
+      "prompt": "Escalated review: approve this request? ${input.request}"
+    },
+    {
+      "id": "finish-escalated",
+      "type": "end",
+      "with": {
+        "approved": "${steps.escalated-review.output.approved}",
+        "actor": "${steps.escalated-review.output.actor}",
+        "comment": "${steps.escalated-review.output.comment}"
+      }
+    }
+  ]
+}

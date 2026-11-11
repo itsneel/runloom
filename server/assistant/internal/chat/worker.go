@@ -48,7 +48,7 @@ func (s *Server) Run(ctx context.Context) {
 			}
 			j.Status = "running"
 			// Queued turns may outlive a provider configuration restart.
-			if s.Provider != nil {
+			if s.Provider != nil && j.Kind != "approval_starter" {
 				j.Model = s.Provider.Model
 			} else {
 				j.Model = ""
@@ -105,7 +105,7 @@ func (s *Server) work(parent context.Context, c Conversation) {
 			break
 		}
 		for _, m := range c.Messages {
-			if m.JobID == j.ID && (m.Role == "user" || (j.Status == "completed" && j.Model != "")) {
+			if m.JobID == j.ID && (m.Role == "user" || (j.Status == "completed" && (j.Model != "" || j.Kind == "approval_starter"))) {
 				messages = append(messages, m)
 			}
 		}
@@ -122,24 +122,12 @@ func (s *Server) work(parent context.Context, c Conversation) {
 	content := ""
 	last := time.Now()
 	var err error
-	if s.Provider == nil {
+	if s.Provider == nil && c.Jobs[index].Kind != "approval_starter" {
 		content = UnconfiguredReply
 		c.Jobs[index].Model = ""
 		c.Jobs[index].Status = "completed"
 	} else {
-		err = s.Provider.StreamAuthoring(ctx, c.Scope, c.Jobs[index].Context, messages, func(delta string) error {
-			content += delta
-			if time.Since(last) < 100*time.Millisecond {
-				return nil
-			}
-			last = time.Now()
-			c.Messages[messageIndex].Content = content
-			c.Jobs[index].UpdatedAt = last.UTC()
-			if s.saveProgress(ctx, c, index, messageIndex) != nil {
-				return ErrConflict
-			}
-			return nil
-		}, func(proposal *Proposal) {
+		attachProposal := func(proposal *Proposal) {
 			if proposal.Operation == "create" {
 				var value map[string]any
 				if json.Unmarshal(proposal.Definition, &value) == nil {
@@ -152,7 +140,33 @@ func (s *Server) work(parent context.Context, c Conversation) {
 			}
 			c.Jobs[index].Proposal = proposal
 			c.Jobs[index].ProposalHash = proposalHash(c.Jobs[index])
-		})
+		}
+		if c.Jobs[index].Kind == "approval_starter" {
+			name, check := validateGeneratedWorkflow(string(approvalStarterDefinition), "create", c.Scope.Workflow)
+			proposal := &Proposal{Name: name, Operation: "create", Definition: approvalStarterDefinition}
+			err = check
+			if err == nil {
+				err = validateProposal(proposal)
+			}
+			if err == nil {
+				attachProposal(proposal)
+				content = "Built the approval starter. It requests a review, sends one reminder after 24 hours without a decision, and escalates after another 24 hours. A human approval or rejection finishes the workflow. The request and both notification addresses are inputs. Studio will confirm the draft save."
+			}
+		} else {
+			err = s.Provider.StreamAuthoring(ctx, c.Scope, c.Jobs[index].Context, messages, func(delta string) error {
+				content += delta
+				if time.Since(last) < 100*time.Millisecond {
+					return nil
+				}
+				last = time.Now()
+				c.Messages[messageIndex].Content = content
+				c.Jobs[index].UpdatedAt = last.UTC()
+				if s.saveProgress(ctx, c, index, messageIndex) != nil {
+					return ErrConflict
+				}
+				return nil
+			}, attachProposal)
+		}
 		c.Jobs[index].Status = "completed"
 		if err == nil && requiresWorkflowAction(c.Jobs[index].Context) && c.Jobs[index].Proposal == nil {
 			c.Jobs[index].Kind = "needs_input"

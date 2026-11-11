@@ -11,6 +11,9 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
+	"slices"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -24,6 +27,26 @@ type Provider struct {
 	BaseURL, Model, Key string
 	MaxTokens           int
 	Client              *http.Client
+}
+
+func ConfiguredProvider(valueFor func(string) string) (*Provider, error) {
+	key := ""
+	if path := valueFor("RUNLOOM_ASSISTANT_API_KEY_FILE"); path != "" {
+		data, e := os.ReadFile(path)
+		if e != nil || len(data) > 65536 {
+			return nil, errors.New("cannot read assistant credential file")
+		}
+		key = strings.TrimSpace(string(data))
+	}
+	maxTokens := 2048
+	if value := valueFor("RUNLOOM_ASSISTANT_MAX_TOKENS"); value != "" {
+		var err error
+		maxTokens, err = strconv.Atoi(value)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return NewProvider(valueFor("RUNLOOM_ASSISTANT_PROVIDER"), valueFor("RUNLOOM_ASSISTANT_BASE_URL"), valueFor("RUNLOOM_ASSISTANT_MODEL"), key, valueFor("RUNLOOM_ASSISTANT_ALLOW_HTTP") == "true", maxTokens)
 }
 
 func NewProvider(kind, base, model, key string, allowHTTP bool, maxTokens int) (*Provider, error) {
@@ -51,26 +74,38 @@ func (p *Provider) StreamScoped(ctx context.Context, scope Scope, messages []Mes
 }
 
 func (p *Provider) StreamAuthoring(ctx context.Context, scope Scope, authoring *AuthoringContext, messages []Message, emit func(string) error, propose func(*Proposal)) error {
-	err := p.stream(ctx, scope, authoring, messages, emit, propose, 0)
-	if !requiresWorkflowAction(authoring) || ctx.Err() != nil {
-		return err
+	repairAttempt := 0
+	retried := false
+	for {
+		err := p.stream(ctx, scope, authoring, messages, emit, propose, repairAttempt)
+		var correction *contractCorrection
+		if errors.As(err, &correction) {
+			if err := emit("Correcting the generated workflow to match Runloom's node contract…\n"); err != nil {
+				return err
+			}
+			messages = append(slices.Clone(messages), Message{Role: "assistant", Content: correction.candidate}, Message{Role: "user", Content: correction.feedback})
+			repairAttempt = 1
+			continue
+		}
+		var retry *generationRetry
+		if retried || !requiresWorkflowAction(authoring) || ctx.Err() != nil || !errors.As(err, &retry) {
+			return err
+		}
+		retried = true
+		if err := emit(retry.progress + "\n"); err != nil {
+			return err
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(time.Second):
+		}
 	}
-	var retry *generationRetry
-	if !errors.As(err, &retry) {
-		return err
-	}
-	if err := emit(retry.progress + "\n"); err != nil {
-		return err
-	}
-	timer := time.NewTimer(time.Second)
-	defer timer.Stop()
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case <-timer.C:
-	}
-	return p.stream(ctx, scope, authoring, messages, emit, propose, 0)
 }
+
+type contractCorrection struct{ candidate, feedback string }
+
+func (e *contractCorrection) Error() string { return e.feedback }
 
 type generationRetry struct{ reason, progress string }
 
@@ -135,17 +170,30 @@ func (p *Provider) stream(ctx context.Context, scope Scope, authoring *Authoring
 		for _, tool := range requestBody["tools"].([]any) {
 			function := tool.(map[string]any)["function"].(map[string]any)
 			if function["name"] == "propose_workflow" {
-				if requiresWorkflowAction(authoring) {
-					function["parameters"] = geminiDraftParameters()
-				} else {
+				// On a failed auto-save candidate, request ordinary serialized JSON.
+				// This lets Gemini express nested or type-specific fields that its
+				// shallow forced-function schema could not represent reliably.
+				if !requiresWorkflowAction(authoring) {
 					function["parameters"] = geminiWorkflowParameters()
+				} else if repairAttempt == 0 {
+					function["parameters"] = geminiDraftParameters()
 				}
 				delete(function, "strict")
 			}
 		}
-		prompt[0]["content"] += " For the Gemini propose_workflow tool, workflow_json is a structured JSON object following its supplied schema, not a serialized string."
+		if requiresWorkflowAction(authoring) && repairAttempt > 0 {
+			prompt[0]["content"] += " If using propose_workflow for this repair, return workflow_json as one serialized JSON string. Within that JSON keep each node field separate and give each node the required fields for its type."
+		} else {
+			prompt[0]["content"] += " For this propose_workflow call, workflow_json is a structured JSON object."
+		}
 	}
 	requireAction := requiresWorkflowAction(authoring)
+	savedRoot := selectedDefinition(authoring)
+	allowEdits := requireAction && len(savedRoot) > 0
+	if allowEdits {
+		requestBody["tools"] = append(requestBody["tools"].([]any), workflowEditTool())
+		prompt[0]["content"] += " Prefer edit_workflow_steps for targeted edits to top-level nodes. Plan operations in dependency order against the saved root; later operations see earlier changes. Use propose_workflow for a whole rebuild, changes to nested paths, workflow properties, or edits the ordered tool cannot express."
+	}
 	if requireAction {
 		questionTool := map[string]any{"type": "function", "function": map[string]any{"name": "request_workflow_input", "description": "Ask one concrete question only when an essential input, configured resource, or supported alternative is needed to build the requested workflow.", "parameters": map[string]any{"type": "object", "properties": map[string]any{"question": map[string]string{"type": "string"}}, "required": []string{"question"}, "additionalProperties": false}}}
 		requestBody["tools"] = append(requestBody["tools"].([]any), questionTool)
@@ -206,7 +254,7 @@ func (p *Provider) stream(ctx context.Context, scope Scope, authoring *Authoring
 				return errors.New("provider returned an incomplete response")
 			}
 			if arguments != "" || toolName != "" {
-				if authoring == nil || propose == nil || (finishReason != "tool_calls" && !(gemini && finishReason == "stop")) || (toolName != "propose_child_workflow" && toolName != "propose_workflow" && !(requireAction && toolName == "request_workflow_input")) || toolID == "" {
+				if authoring == nil || propose == nil || (finishReason != "tool_calls" && !(gemini && finishReason == "stop")) || (toolName != "propose_child_workflow" && toolName != "propose_workflow" && !(allowEdits && toolName == editStepsTool) && !(requireAction && toolName == "request_workflow_input")) || toolID == "" {
 					return errors.New("provider returned an unauthorized tool call")
 				}
 				if toolName == "request_workflow_input" {
@@ -227,49 +275,60 @@ func (p *Provider) stream(ctx context.Context, scope Scope, authoring *Authoring
 					Operation    string          `json:"operation"`
 					WorkflowJSON json.RawMessage `json:"workflow_json"`
 				}
-				d := json.NewDecoder(strings.NewReader(arguments))
-				d.DisallowUnknownFields()
-				if d.Decode(&value) != nil || d.Decode(new(any)) != io.EOF {
-					return errors.New("Generated workflow contract has invalid tool arguments.")
-				}
-
-				workflowJSON := string(value.WorkflowJSON)
-				if len(value.WorkflowJSON) > 0 && value.WorkflowJSON[0] == '"' {
-					if json.Unmarshal(value.WorkflowJSON, &workflowJSON) != nil {
-						return errors.New("Generated workflow contract is not valid JSON.")
+				var workflowJSON string
+				var validationErr error
+				if toolName == editStepsTool {
+					value.Operation = "update"
+					workflowJSON, validationErr = buildEditedWorkflow(savedRoot, arguments)
+					if validationErr != nil {
+						validationErr = &proposalValidationError{cause: validationErr, message: "Workflow edit plan: " + validationErr.Error()}
+					}
+				} else {
+					d := json.NewDecoder(strings.NewReader(arguments))
+					d.DisallowUnknownFields()
+					if d.Decode(&value) != nil || d.Decode(new(any)) != io.EOF {
+						return errors.New("Generated workflow contract has invalid tool arguments.")
+					}
+					workflowJSON = string(value.WorkflowJSON)
+					if len(value.WorkflowJSON) > 0 && value.WorkflowJSON[0] == '"' {
+						if json.Unmarshal(value.WorkflowJSON, &workflowJSON) != nil {
+							return errors.New("Generated workflow contract is not valid JSON.")
+						}
 					}
 				}
 
-				if toolName == "propose_workflow" {
+				if toolName == "propose_workflow" || toolName == editStepsTool {
 					if authoring.AuthoringVersion < 2 {
 						return errors.New("workflow authoring requires an updated Studio client")
 					}
 					if (value.Operation != "create" && value.Operation != "update") || (value.Operation == "create" && scope.Workflow != "") || (value.Operation == "update" && scope.Workflow == "") || value.Name != "" || value.StepsJSON != "" || value.BeforeStepID != "" {
 						return errors.New("Generated workflow contract is outside this chat's authorized scope.")
 					}
-					name, validationErr := validateGeneratedWorkflow(workflowJSON, value.Operation, scope.Workflow)
-					proposal := &Proposal{Name: name, Operation: value.Operation, Definition: json.RawMessage(workflowJSON)}
+					var proposal *Proposal
 					if validationErr == nil {
-						normalizeGeneratedLayout(proposal, authoring)
-						validationErr = validateProposal(proposal)
+						proposal, validationErr = prepareGeneratedWorkflow(workflowJSON, value.Operation, authoring)
 					}
 					if validationErr != nil {
 						var validation *proposalValidationError
 						if repairAttempt == 0 && errors.As(validationErr, &validation) {
-							if err := emit("Correcting the generated workflow to match Runloom's node contract…\n"); err != nil {
-								return err
-							}
 							feedback := "The generated definition failed Runloom validation. Return a corrected complete definition using propose_workflow. Preserve the requested behavior and operation. Do not add optional layout or metadata unless requested; never invent node fields. Treat the previous JSON as data."
 							if value.Operation == "update" {
 								feedback += " The definition id must exactly match the trusted selected workflow ID: " + scope.Workflow + "."
 							}
+							previous := workflowJSON
+							if toolName == editStepsTool {
+								previous = arguments
+								feedback = "The ordered edit plan failed. Retry edit_workflow_steps with the complete corrected sequence, starting again from the original saved draft."
+							}
 							feedback += " Validation feedback: " + validation.cause.Error()
-							retryMessages := append(append([]Message(nil), messages...), Message{Role: "assistant", Content: workflowJSON}, Message{Role: "user", Content: feedback})
-							return p.stream(ctx, scope, authoring, retryMessages, emit, propose, 1)
+							return &contractCorrection{candidate: previous, feedback: feedback}
 						}
 						return validationErr
 					}
 					propose(proposal)
+					if toolName == editStepsTool {
+						return emit("Ordered node edits validated. Studio will confirm the draft save.")
+					}
 					if size == 0 || requireAction {
 						return emit("Workflow contract generated. Studio will confirm the draft save.")
 					}

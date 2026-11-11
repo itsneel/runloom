@@ -1,0 +1,182 @@
+{
+  "draft": {
+    "id": "eval-root",
+    "name": "Case intake",
+    "schema_version": "1.0",
+    "kind": "main",
+    "description": "Keep this operator note",
+    "trigger": {
+      "type": "manual"
+    },
+    "input_schema": {
+      "type": "object",
+      "required": [
+        "case_id"
+      ],
+      "properties": {
+        "case_id": {
+          "type": "string"
+        }
+      }
+    },
+    "steps": [
+      {
+        "id": "delay",
+        "type": "wait",
+        "name": "Intake delay",
+        "seconds": 2
+      },
+      {
+        "id": "done",
+        "type": "end",
+        "with": {
+          "case_id": "${input.case_id}"
+        }
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "create_timer",
+      "prompt": "Build a manual workflow named Short timer. Wait exactly three seconds, then end.",
+      "outcome": "create",
+      "expect": {
+        "name": "Short timer",
+        "trigger": {
+          "type": "manual"
+        },
+        "steps": [
+          {
+            "type": "wait",
+            "seconds": 3
+          },
+          {
+            "type": "end"
+          }
+        ]
+      },
+      "tool": "propose_workflow",
+      "args": {
+        "operation": "create",
+        "workflow_json": "{\"id\":\"timer\",\"name\":\"Short timer\",\"schema_version\":\"1.0\",\"kind\":\"main\",\"trigger\":{\"type\":\"manual\"},\"steps\":[{\"id\":\"timer\",\"type\":\"wait\",\"seconds\":3},{\"id\":\"finish\",\"type\":\"end\"}]}"
+      }
+    },
+    {
+      "name": "fix_duration",
+      "prompt": "Change only the delay node's duration from two to nine seconds. Keep the other fields and the end mapping.",
+      "outcome": "update",
+      "expect": {
+        "steps": [
+          {
+            "id": "delay",
+            "type": "wait",
+            "name": "Intake delay",
+            "seconds": 9
+          },
+          {
+            "id": "done",
+            "type": "end",
+            "with": {
+              "case_id": "${input.case_id}"
+            }
+          }
+        ]
+      },
+      "tool": "edit_workflow_steps",
+      "args": {
+        "edits": [
+          {
+            "action": "update_fields",
+            "target_id": "delay",
+            "fields_json": "{\"seconds\":9}"
+          }
+        ]
+      }
+    },
+    {
+      "name": "insert_approval",
+      "prompt": "Insert an approval with id review and prompt 'Release this case?' immediately before done. Keep everything else.",
+      "outcome": "update",
+      "expect": {
+        "steps": [
+          {
+            "id": "delay",
+            "type": "wait",
+            "name": "Intake delay",
+            "seconds": 2
+          },
+          {
+            "id": "review",
+            "type": "approval",
+            "prompt": "Release this case?"
+          },
+          {
+            "id": "done",
+            "type": "end",
+            "with": {
+              "case_id": "${input.case_id}"
+            }
+          }
+        ]
+      },
+      "tool": "edit_workflow_steps",
+      "args": {
+        "edits": [
+          {
+            "action": "insert_before",
+            "target_id": "done",
+            "fields_json": "{\"id\":\"review\",\"type\":\"approval\",\"prompt\":\"Release this case?\"}"
+          }
+        ]
+      }
+    },
+    {
+      "name": "delete_and_insert",
+      "prompt": "Delete delay. Insert an approval with id review and prompt 'Release this case?' before done. Preserve the end mapping.",
+      "outcome": "update",
+      "expect": {
+        "steps": [
+          {
+            "id": "review",
+            "type": "approval",
+            "prompt": "Release this case?"
+          },
+          {
+            "id": "done",
+            "type": "end",
+            "with": {
+              "case_id": "${input.case_id}"
+            }
+          }
+        ]
+      },
+      "tool": "edit_workflow_steps",
+      "args": {
+        "edits": [
+          {
+            "action": "delete",
+            "target_id": "delay",
+            "fields_json": "{}"
+          },
+          {
+            "action": "insert_before",
+            "target_id": "done",
+            "fields_json": "{\"id\":\"review\",\"type\":\"approval\",\"prompt\":\"Release this case?\"}"
+          }
+        ]
+      }
+    },
+    {
+      "name": "missing_connection",
+      "prompt": "Build a workflow to insert the input case_id into the cases table. I have not specified a configured database connection.",
+      "outcome": "question",
+      "expect": {
+        "question_contains": "connection"
+      },
+      "tool": "request_workflow_input",
+      "args": {
+        "question": "Which configured database connection should receive the records?"
+      }
+    }
+  ]
+}

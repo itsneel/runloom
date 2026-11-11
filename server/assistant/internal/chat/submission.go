@@ -116,6 +116,10 @@ func (s *Server) submit(w http.ResponseWriter, r *http.Request, c Conversation, 
 				context.SaveDraft = body.SaveDraft
 				job.Context = context
 				job.Kind = "authoring"
+				if useApprovalStarter(c, context, body.Content) {
+					job.Kind = "approval_starter"
+					job.Model = ""
+				}
 			} else if body.SaveDraft {
 				job.Status = "failed"
 				job.Error = "Workflow authoring context is unavailable. Reload Studio and check the Assistant service configuration."

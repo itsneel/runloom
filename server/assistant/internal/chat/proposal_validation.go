@@ -198,9 +198,26 @@ func geminiDraftParameters() map[string]any {
 	_ = json.Unmarshal([]byte(WorkflowSchema), &contract)
 	defs := contract["$defs"].(map[string]any)
 	fields := map[string]any{}
+	requiredByKind := []string{}
 	for _, alt := range defs["step"].(map[string]any)["oneOf"].([]any) {
 		ref := alt.(map[string]any)["$ref"].(string)
-		for name, raw := range defs[strings.TrimPrefix(ref, "#/$defs/")].(map[string]any)["properties"].(map[string]any) {
+		node := defs[strings.TrimPrefix(ref, "#/$defs/")].(map[string]any)
+		properties := node["properties"].(map[string]any)
+		kind := properties["type"].(map[string]any)
+		var extra []string
+		for _, field := range node["required"].([]any) {
+			if field != "id" && field != "type" {
+				extra = append(extra, field.(string))
+			}
+		}
+		if len(extra) > 0 {
+			kinds := fmt.Sprint(kind["const"])
+			if enum, ok := kind["enum"].([]any); ok {
+				kinds = fmt.Sprint(enum)
+			}
+			requiredByKind = append(requiredByKind, kinds+": "+strings.Join(extra, ", "))
+		}
+		for name, raw := range properties {
 			property := raw.(map[string]any)
 			if link, ok := property["$ref"].(string); ok {
 				property = defs[strings.TrimPrefix(link, "#/$defs/")].(map[string]any)
@@ -216,7 +233,7 @@ func geminiDraftParameters() map[string]any {
 		}
 	}
 	fields["id"] = defs["identifier"]
-	fields["type"] = map[string]any{"type": "string", "enum": names}
+	fields["type"] = map[string]any{"type": "string", "enum": names, "description": "Required sibling fields by node type: " + strings.Join(requiredByKind, "; ")}
 	steps := map[string]any{"type": "array", "items": map[string]any{"type": "object", "properties": fields, "required": []string{"id", "type"}, "additionalProperties": false}}
 	properties := contract["properties"].(map[string]any)
 	properties["schema_version"] = map[string]any{"type": "string", "enum": []string{"1.0"}}
@@ -260,22 +277,9 @@ func normalizeGeneratedLayout(p *Proposal, authoring *AuthoringContext) {
 	// that were valid before a node was inserted, removed or moved to a branch.
 	// Studio's deterministic graph layout owns the new arrangement.
 	rearrange := p.Operation == "create"
-	if p.Operation == "update" && authoring != nil {
-		var workflows []struct {
-			ID         string          `json:"id"`
-			Definition json.RawMessage `json:"definition"`
-		}
-		if json.Unmarshal(authoring.Workflows, &workflows) == nil {
-			for _, workflow := range workflows {
-				if workflow.ID == authoring.RootID {
-					var saved map[string]json.RawMessage
-					if json.Unmarshal(workflow.Definition, &saved) == nil && len(saved["steps"]) > 0 {
-						rearrange = workflowTopology(saved["steps"]) != workflowTopology(definition["steps"]) || handlerTopology(saved["signal_handlers"]) != handlerTopology(definition["signal_handlers"])
-					}
-					break
-				}
-			}
-		}
+	var saved map[string]json.RawMessage
+	if p.Operation == "update" && json.Unmarshal(selectedDefinition(authoring), &saved) == nil && len(saved["steps"]) > 0 {
+		rearrange = workflowTopology(saved["steps"]) != workflowTopology(definition["steps"]) || handlerTopology(saved["signal_handlers"]) != handlerTopology(definition["signal_handlers"])
 	}
 	if rearrange {
 		delete(definition, "layout")
@@ -293,27 +297,10 @@ func normalizeGeneratedLayout(p *Proposal, authoring *AuthoringContext) {
 		return
 	}
 	delete(definition, "layout")
-	if p.Operation == "update" && authoring != nil {
-		var workflows []struct {
-			ID         string          `json:"id"`
-			Definition json.RawMessage `json:"definition"`
-		}
-		if json.Unmarshal(authoring.Workflows, &workflows) == nil {
-			for _, workflow := range workflows {
-				if workflow.ID != authoring.RootID {
-					continue
-				}
-				var saved map[string]json.RawMessage
-				if json.Unmarshal(workflow.Definition, &saved) == nil {
-					if original, ok := saved["layout"]; ok {
-						var valid any
-						if json.Unmarshal(original, &valid) == nil && proposalLayoutSchema.Validate(valid) == nil {
-							definition["layout"] = original
-						}
-					}
-				}
-				break
-			}
+	if original, ok := saved["layout"]; ok {
+		var valid any
+		if json.Unmarshal(original, &valid) == nil && proposalLayoutSchema.Validate(valid) == nil {
+			definition["layout"] = original
 		}
 	}
 	if normalized, err := json.Marshal(definition); err == nil && len(normalized) <= 48000 {
@@ -367,6 +354,31 @@ func handlerTopology(raw json.RawMessage) string {
 	}
 	encoded, _ := json.Marshal(result)
 	return string(encoded)
+}
+
+func prepareGeneratedWorkflow(raw, operation string, authoring *AuthoringContext) (*Proposal, error) {
+	name, err := validateGeneratedWorkflow(raw, operation, authoring.RootID)
+	if err != nil {
+		return nil, err
+	}
+	proposal := &Proposal{Name: name, Operation: operation, Definition: json.RawMessage(raw)}
+	if operation == "create" {
+		// Studio creates drafts in the current format. Only fill an omission;
+		// an explicitly unsupported schema version still needs correction.
+		var fields map[string]json.RawMessage
+		if err := json.Unmarshal(proposal.Definition, &fields); err != nil {
+			return nil, err
+		}
+		if _, exists := fields["schema_version"]; !exists {
+			fields["schema_version"] = json.RawMessage(`"1.0"`)
+			proposal.Definition, err = json.Marshal(fields)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+	normalizeGeneratedLayout(proposal, authoring)
+	return proposal, validateProposal(proposal)
 }
 
 // Keep authoring preflight failures in the same bounded correction path as schema
