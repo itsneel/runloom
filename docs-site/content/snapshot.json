@@ -193,7 +193,7 @@
   },
   "CONTRIBUTING.md": {
     "destination": "content/sources/CONTRIBUTING.md",
-    "sha256": "0833faa5c741018a17720a79396c37a6afc4560e2ea70ed1ea646b9daff788ec"
+    "sha256": "c2a608219f51654696c7eb57dd7f6c2c5f603a7a285b939f1200420fc6856ff4"
   },
   "server/workflows/internal/api/consumer.go": {
     "destination": "content/sources/server/workflows/internal/api/consumer.go",
@@ -233,7 +233,7 @@
   },
   "docs/upgrading.md": {
     "destination": "content/sources/docs/upgrading.md",
-    "sha256": "9a41ad039b0f4ed28c834bdfefb4a5617edd7d4a831ed862f90fbe70166215c8"
+    "sha256": "f38ec0f6d9ed72a1c396d62abc563bbafb0169d0fd2bf3a9e011524e8a09ce2f"
   },
   "compose/config/README.md": {
     "destination": "content/sources/compose/config/README.md",

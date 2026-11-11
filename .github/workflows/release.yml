@@ -1,0 +1,172 @@
+name: Release Runloom
+run-name: Release Runloom ${{ inputs.version }} from ${{ github.ref_name }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release version without v (for example 1.2.3 or 1.2.3-rc.1)
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: runloom-release-${{ inputs.version }}
+  cancel-in-progress: false
+
+env:
+  VERSION: ${{ inputs.version }}
+
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    environment: ${{ github.event.repository.private && 'private-release' || 'release' }}
+    permissions:
+      actions: read
+      contents: write
+      pages: read
+    outputs:
+      registry: ${{ steps.version.outputs.registry }}
+      pages_url: ${{ steps.pages.outputs.base_url }}
+    steps:
+      - name: Verify owner approval for a public release
+        if: github.event.repository.private != true
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [[ "$GITHUB_REF_PROTECTED" != true || ( "$GITHUB_REF" != refs/heads/master && "$GITHUB_REF" != refs/heads/release ) ]]; then
+            echo "::error::Select the protected master or release branch."
+            exit 1
+          fi
+          if ! gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/approvals" |
+            jq -e 'any(.[]; .state == "approved" and .user.login == "itsneel" and any(.environments[]; .name == "release"))' > /dev/null; then
+            echo "::error::This release requires a recorded approval from @itsneel in the release environment."
+            exit 1
+          fi
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Test Helm repository indexing and downloads
+        run: python3 scripts/tests/helm-repository.py
+      - name: Check GitHub Pages configuration
+        id: pages
+        uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5.0.0
+      - name: Reserve the release version for this commit
+        id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          bash scripts/release.sh reserve
+          echo "registry=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
+
+  images:
+    needs: prepare
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+      - name: Build and test native images
+        run: make docker-build && make test-docker-images
+      - name: Push tested architecture images to GHCR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REGISTRY: ${{ needs.prepare.outputs.registry }}
+          ARCH: ${{ matrix.arch }}
+        run: |
+          echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          bash scripts/release.sh stage
+
+  publish:
+    needs: [prepare, images]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      packages: write
+    env:
+      REGISTRY: ${{ needs.prepare.outputs.registry }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Authenticate Docker and Helm to GHCR
+        run: |
+          echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          echo "$GH_TOKEN" | helm registry login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+      - name: Publish versioned image indexes and verify both architectures
+        run: bash scripts/release.sh promote
+      - name: Package and lint Helm charts against the published digests
+        run: |
+          bash scripts/release.sh package
+          bash scripts/tests/release-charts.sh
+      - name: Push charts, verify registry downloads, and publish GitHub Release
+        env:
+          PAGES_URL: ${{ needs.prepare.outputs.pages_url }}
+        run: bash scripts/release.sh publish
+
+  helm-repository:
+    needs: publish
+    runs-on: ubuntu-24.04
+    # Snapshot and deploy together so a slower run cannot replace a newer catalog.
+    concurrency:
+      group: runloom-helm-pages
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Index all published chart versions
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash scripts/helm-repository.sh dist/pages/charts
+      - uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4.0.0
+        with:
+          path: dist/pages
+          name: helm-pages-${{ github.run_attempt }}
+      - name: Deploy the Helm repository
+        id: deploy
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5
+        with:
+          artifact_name: helm-pages-${{ github.run_attempt }}
+      - name: Verify Helm can fetch both charts from the live index
+        env:
+          PAGE_URL: ${{ steps.deploy.outputs.page_url }}
+        run: |
+          repo="${PAGE_URL%/}/charts"
+          mkdir -p dist/remote
+          for chart in runloom runloom-ingress; do
+            for attempt in {1..12}; do
+              if helm pull "$chart" --repo "$repo" --version "$VERSION" --destination dist/remote; then break; fi
+              if [[ $attempt == 12 ]]; then exit 1; fi
+              sleep 10
+            done
+            cmp "dist/pages/charts/$chart-$VERSION.tgz" "dist/remote/$chart-$VERSION.tgz"
+          done
+          echo "Helm repository: $repo" >> "$GITHUB_STEP_SUMMARY"

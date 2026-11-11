@@ -1,6 +1,6 @@
 # Self-hosted version upgrades
 
-Status: Draft. Updated: 2026-11-09. Audience: operators responsible for an existing self-hosted Runloom installation. Owner: TBD.
+Status: Draft. Updated: 2026-11-11. Audience: operators responsible for an existing self-hosted Runloom installation. Owner: TBD.
 
 This guide describes how to prepare, apply and verify a newer Runloom release while preserving accounts, workflow definitions, published versions, runs and credentials. It covers the independent-service architecture and separates hosted Helm, operator-managed Docker Compose, and guarded local development helpers. It does not authorize a deployment or promise compatibility between arbitrary releases.
 
@@ -13,6 +13,27 @@ Implementation references were inspected on 2026-11-09 at revision `09e0aa1`. Co
 3. Treat a move from the retired monolithic backend to independent services as a separate migration. The service-split instructions describe fresh installation, not import of existing data. Do not apply this routine upgrade procedure to that transition. See [service ownership and migration boundaries](service-split.md) and [historical rename considerations](rebranding.md).
 4. Rehearse the exact source-to-target transition using isolated copies of application databases, identity data, Temporal state and required encryption keys. Prevent the rehearsal environment from reaching production email, external APIs, model providers or production task queues. Replaying a workflow history and executing its activities are different operations; running activities may produce real side effects and costs.
 5. Plan a maintenance window unless the release establishes mixed-version service and worker compatibility. Agree who can stop rollout, the restoration point, acceptable data loss and the verification needed to reopen access. No zero-downtime guarantee is implied by Kubernetes rolling updates.
+
+For a release published through the manual GitHub workflow, obtain the exact chart version from the completed GitHub Release. The following read-only examples use `1.2.3` as a placeholder. Replace it with a published version and substitute the GitHub owner if using a fork.
+
+```bash
+helm show chart oci://ghcr.io/itsneel/charts/runloom --version 1.2.3
+helm show values oci://ghcr.io/itsneel/charts/runloom --version 1.2.3
+helm show chart oci://ghcr.io/itsneel/charts/runloom-ingress --version 1.2.3
+```
+
+After the release workflow’s Pages job succeeds, add the indexed Helm repository once and refresh it before selecting a version. The URL below uses the default Pages domain for this repository. For a fork or custom domain, use the URL printed by the release workflow.
+
+```bash
+helm repo add runloom https://itsneel.github.io/runloom/charts
+helm repo update runloom
+helm search repo runloom/ --versions
+helm show values runloom/runloom --version 1.2.3
+```
+
+Both `runloom/runloom` and `runloom/runloom-ingress` retain published versions. Add `--devel` to the search to include prereleases.
+
+The released application chart includes the GHCR repositories and verified image digests. Check your existing operator values for image overrides that could mask these defaults. In the Helm commands below, use the OCI chart reference with `--version` to select the reviewed package. The optional ingress controller is a separate chart. [Manual release procedure](../CONTRIBUTING.md#publish-a-manual-release)
 
 ## 2. Preserve state and recovery material
 
@@ -155,3 +176,5 @@ helm rollback "$RUNLOOM_RELEASE" "$RUNLOOM_PREVIOUS_REVISION" \
 The authoritative setup and preservation references are [deployment](deployment.md), [chart configuration](../charts/runloom/README.md), [service ownership](service-split.md), [workflow definition versus worker versioning](versioning.md), and [organization namespace compatibility](temporal-organizations.md). Relevant implementation entry points are the [Makefile](../Makefile), [local Compose helper](../scripts/local-services.mjs), [local kind helper](../scripts/local-k8s.mjs), [database-setup hook](../charts/runloom/templates/database-setup.yaml), and [Auth storage initialization](../server/auth/internal/recordset/recordset.go).
 
 2026-11-09: Initial draft covering independent-service self-hosted upgrades, state preservation, configuration/image alignment, verification and compatibility-limited rollback. No supported release-transition matrix, complete backup tooling or migration automation is claimed.
+
+2026-11-11. Added version-pinned OCI chart discovery and guidance for reviewing image overrides.
