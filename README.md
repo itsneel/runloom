@@ -27,7 +27,7 @@ The project, Helm chart, and default Compose project are named `runloom`; the bu
 
 ## License and contributions
 
-Original project code, documentation, schemas, and examples are available under the [MIT License](LICENSE). Third-party dependencies and services retain their own licenses; see [third-party notices](THIRD_PARTY_NOTICES.md), including the distinction between the MongoDB driver and Community Server.
+Original project code, documentation, schemas, and examples are available under the [Apache License 2.0](LICENSE). Third-party dependencies and services retain their own licenses; see [third-party notices](THIRD_PARTY_NOTICES.md), including the distinction between the MongoDB driver and Community Server.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for local setup, checks, workflow design rules, and the pull request process.
 

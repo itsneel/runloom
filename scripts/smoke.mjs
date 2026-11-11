@@ -40,7 +40,7 @@ try {
   const page = await fetch(base, { signal: AbortSignal.timeout(10000) });
   assert(page.ok && (await page.text()).includes('<app-root>'), 'Studio HTML did not load');
   const license = await fetch(base + '/LICENSE', { signal: AbortSignal.timeout(10000) });
-  assert(license.ok && (await license.text()).includes('MIT License'), 'UI license is missing');
+  assert(license.ok && (await license.text()).includes('Apache License'), 'UI license is missing');
   const health = await request('/api/v1/health');
   assert.equal(health.temporal, true);
   assert.equal(health.database, true);

@@ -75,4 +75,4 @@ To run the same read-only browser checks against a running docs deployment, use 
 
 Use `npm run format` for this project's native Prettier formatter. There is no global npm package or commit hook. `npm audit` checks this project's dependency graph without changing other projects.
 
-Original code and documentation use the included MIT LICENSE. Preserve generated `3rdpartylicenses.txt` and `generated/swagger/` upstream notices when distributing the static output.
+Original code and documentation use the included Apache 2.0 LICENSE. Preserve generated `3rdpartylicenses.txt` and `generated/swagger/` upstream notices when distributing the static output.

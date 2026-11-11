@@ -126,7 +126,7 @@ make helm-package
 
 The package is written under `dist/charts/`. These commands do not install a release.
 
-To publish the chart to an OCI registry after authenticating with `helm registry login`, run `helm push dist/charts/runloom-0.4.0.tgz oci://registry.example.com/charts`. Consumers can install it with `helm upgrade --install runloom oci://registry.example.com/charts/runloom --version 0.4.0 --namespace runloom --create-namespace -f values-hosted.yaml --wait`, using their reviewed hosted values. Publish the matching application images separately.
+To publish the chart to an OCI registry after authenticating with `helm registry login`, run `helm push dist/charts/runloom-0.1.0.tgz oci://registry.example.com/charts`. Consumers can install it with `helm upgrade --install runloom oci://registry.example.com/charts/runloom --version 0.1.0 --namespace runloom --create-namespace -f values-hosted.yaml --wait`, using their reviewed hosted values. Publish the matching application images separately.
 
 ### Development cluster
 

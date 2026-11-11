@@ -1,6 +1,6 @@
 # Third-party licenses
 
-The [MIT License](LICENSE) applies to original Runloom code, documentation, schemas, and examples. It does not replace the licenses of dependencies, database servers, container base images, or externally hosted services.
+The [Apache License 2.0](LICENSE) applies to original Runloom code, documentation, schemas, and examples. It does not replace the licenses of dependencies, database servers, container base images, or externally hosted services.
 
 This document identifies dependencies from the independent `server/*/go.mod`, `server/gateway/go.mod`, `tools/database-setup/go.mod`, `sdk/go-auth/go.mod`, Studio package lockfiles and the Website package lockfile. It is a license summary, not an exhaustive transitive dependency audit. Preserve the authoritative LICENSE and NOTICE files in each project's vendored dependencies.
 
@@ -51,7 +51,7 @@ The installed packages contain their respective license texts. Production UI bui
 
 ## Database servers and containers
 
-The optional independent `charts/runloom-ingress` chart vendors the unmodified F5 NGINX Ingress Controller Helm chart 2.8.0 (controller 5.7.0), from `oci://ghcr.io/nginx/charts/nginx-ingress`. Upstream source is [nginx/kubernetes-ingress](https://github.com/nginx/kubernetes-ingress/tree/v5.7.0), licensed Apache-2.0. Runloom's MIT license applies only to the wrapper and original configuration. Keep the upstream archive and Apache license when distributing the wrapper. Controller and NGINX container dependencies retain their own licenses.
+The optional independent `charts/runloom-ingress` chart vendors the unmodified F5 NGINX Ingress Controller Helm chart 2.8.0 (controller 5.7.0), from `oci://ghcr.io/nginx/charts/nginx-ingress`. Upstream source is [nginx/kubernetes-ingress](https://github.com/nginx/kubernetes-ingress/tree/v5.7.0), licensed Apache-2.0. Runloom's Apache 2.0 license applies only to the wrapper and original configuration. Keep the upstream archive and Apache license when distributing the wrapper. Controller and NGINX container dependencies retain their own licenses.
 
 PostgreSQL uses the [PostgreSQL License](https://www.postgresql.org/about/licence/).
 
@@ -59,11 +59,11 @@ Keycloak is Apache-2.0 licensed; see its [license](https://github.com/keycloak/k
 
 MongoDB Community Server uses [SSPL-1.0](https://www.mongodb.com/legal/licensing/server-side-public-license), which is [not an OSI-approved open-source license](https://opensource.org/blog/the-sspl-is-not-an-open-source-license). This differs from the Apache-2.0 license of the MongoDB Go driver. See [MongoDB's licensing explanation](https://www.mongodb.com/legal/licensing/community-edition) for the server and driver distinction. The Compose file currently starts both database services, even when PostgreSQL is selected for application storage.
 
-The Go, Node.js, Nginx, distroless, Temporal, PostgreSQL, and MongoDB images each include software with its own terms and notices. A container label declaring this application's MIT license does not relicense its base image or dependencies. Review the exact image versions and their bundled notices when redistributing images.
+The Go, Node.js, Nginx, distroless, Temporal, PostgreSQL, and MongoDB images each include software with its own terms and notices. A container label declaring this application's Apache 2.0 license does not relicense its base image or dependencies. Review the exact image versions and their bundled notices when redistributing images.
 
 ## Distribution
 
-1. Include the project's MIT license with source, binaries, and browser distributions. The Go image includes it at `/usr/share/licenses/runloom/LICENSE`; the UI serves it as `/LICENSE`.
+1. Include the project's Apache 2.0 license with source, binaries, and browser distributions. The Go image includes it at `/usr/share/licenses/runloom/LICENSE`; the UI serves it as `/LICENSE`.
 2. Preserve upstream copyright, license, and NOTICE files as required. For Go binary releases, collect applicable notices for the packages actually linked into the binaries, including transitive dependencies. The current Docker build copies the project license but does not generate that Go dependency notice bundle.
 3. Preserve Angular's generated `3rdpartylicenses.txt` with the production browser assets. It covers licenses extracted by the bundler, not every build tool or container package.
 4. Recheck dependency licenses and this document when changing Go manifests, any Studio application/library manifest or lockfile, website manifests or lockfiles, or container base images. Each independent project must carry its own project license and preserve applicable dependency notices.

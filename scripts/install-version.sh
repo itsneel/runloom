@@ -3,7 +3,7 @@ set -euo pipefail
 usage() {
   cat <<'EOF'
 Usage: install-version.sh VERSION [--no-forward]
-Example: ./install-version.sh 0.4.0-rc.1
+Example: ./install-version.sh 0.1.0-rc.1
 Creates or reuses the local kind cluster runloom-rc, installs the published
 chart, configures login, runs Helm tests, then serves Studio on localhost:4210.
 Use --no-forward to exit after verification. Override the cluster, Studio port
@@ -17,7 +17,7 @@ version=${1#v}
 number='(0|[1-9][0-9]*)'
 identifier="($number|[0-9]*[A-Za-z-][0-9A-Za-z-]*)"
 pattern="^$number\\.$number\\.$number(-$identifier(\\.$identifier)*)?$"
-if [[ ! $version =~ $pattern || ${#version} -gt 128 ]]; then echo 'Expected a release version such as 0.4.0-rc.1.' >&2; exit 2; fi
+if [[ ! $version =~ $pattern || ${#version} -gt 128 ]]; then echo 'Expected a release version such as 0.1.0-rc.1.' >&2; exit 2; fi
 for tool in docker kind kubectl helm node curl tar; do
   command -v "$tool" >/dev/null || { echo "Missing required command: $tool" >&2; exit 1; }
 done

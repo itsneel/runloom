@@ -24,7 +24,7 @@ docs:
 
 The chart derives the docs ingress hostname from `docs.publicURL`; it does not add a `/docs` path to Studio. Ingress controllers and certificate provisioning remain operator-managed. To use an external static host, set `docs.enabled=false` while retaining its separate `docs.publicURL`. Documentation has no database, service tokens or backend runtime dependency. Its HTTP health check participates in `helm test` when enabled. Native builds and the non-containerized marketing website remain independent.
 
-Updated: 2026-10-15. Chart version 0.4.0 targets the independent-service architecture. Local Make commands bootstrap the dependencies before installing this chart. Direct Helm and hosted deployments retain operator-managed database and credential references.
+Updated: 2026-10-15. Chart version 0.1.0 targets the independent-service architecture. Local Make commands bootstrap the dependencies before installing this chart. Direct Helm and hosted deployments retain operator-managed database and credential references.
 
 Ingress remains optional. See [optional ingress setup](../runloom-ingress/README.md) for the separate NGINX controller release, existing-controller mode and externally managed routing. The local hostname examples use `studio.runloom.dev` with HTTPS; default port-forward access remains `http://localhost:4200`.
 
@@ -276,7 +276,7 @@ The chart retains StatefulSet PVCs and the generated development vault Secret af
 
 Set `observability.enabled: true` to add backend logging/metrics sidecars and an internal Prometheus instance. No visualizer is installed. See [observability](../../docs/observability.md) for privacy, retention, resource limits, operator access and validation commands.
 
-See the repository's [deployment guide](../../docs/deployment.md) for Compose, registry publishing, smoke tests, secrets, upgrades, and troubleshooting. The chart is distributed under the included MIT license.
+See the repository's [deployment guide](../../docs/deployment.md) for Compose, registry publishing, smoke tests, secrets, upgrades, and troubleshooting. The chart is distributed under the included Apache 2.0 license.
 # External database connections
 
 Database nodes reuse encrypted team connections created in Management. The API

@@ -1,6 +1,6 @@
 # Configure Runloom with Helm
 
-Use this guide to choose an installation mode and prepare a values file. Defaults below apply to application chart 0.4.0. The [default values](../charts/runloom/values.yaml) list every key, and the [schema](../charts/runloom/values.schema.json) defines accepted types and ranges.
+Use this guide to choose an installation mode and prepare a values file. Defaults below apply to application chart 0.1.0. The [default values](../charts/runloom/values.yaml) list every key, and the [schema](../charts/runloom/values.schema.json) defines accepted types and ranges.
 
 ## Choose an installation mode
 

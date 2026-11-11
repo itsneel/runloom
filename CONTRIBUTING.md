@@ -116,9 +116,9 @@ Authentication changes must preserve PKCE, verified-email checks, token issuer/a
 
 ## Contribution licensing
 
-By intentionally submitting a contribution for inclusion, you agree to license that contribution under the project's [MIT License](LICENSE). Submit only work you are entitled to contribute; you retain ownership of your contribution.
+By intentionally submitting a contribution for inclusion, you agree to license that contribution under the project's [Apache License 2.0](LICENSE). Submit only work you are entitled to contribute; you retain ownership of your contribution.
 
-Preserve third-party copyright notices, license texts, and any required NOTICE files. Identify the source and license of copied code or assets in the pull request and update [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) when dependencies or attribution change. Do not represent third-party material as original MIT-licensed project code.
+Preserve third-party copyright notices, license texts, and any required NOTICE files. Identify the source and license of copied code or assets in the pull request and update [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) when dependencies or attribution change. Do not represent third-party material as original Apache-2.0-licensed project code.
 
 Keep the root `LICENSE` and the copies in `server/`, each independent service, `server/gateway/`, `tools/database-setup/`, `sdk/go-auth/`, `Website/`, `charts/runloom/`, each Studio application and the platform library identical. Preserve upstream licenses in vendored dependencies. Run `make check-branding` to verify naming and license consistency.
 

@@ -95,7 +95,7 @@ test("loads independently with working navigation and no overflow", async ({
   ).toBeVisible();
   const license = await page.request.get("/LICENSE");
   expect(license.status()).toBe(200);
-  expect(await license.text()).toContain("MIT License");
+  expect(await license.text()).toContain("Apache License");
   expect(errors).toEqual([]);
   expect(external).toEqual([]);
 });
