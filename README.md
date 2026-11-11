@@ -131,6 +131,8 @@ The existing `docker-*-go` Make targets remain aliases. See [the deployment guid
 
 ## Kubernetes and Helm
 
+Use the [Helm values guide](docs/helm-values.md) to choose a deployment mode, prepare required resources, and configure optional features.
+
 The [Runloom chart](charts/runloom) deploys the UI, API, and worker independently. Default values include development Temporal and database StatefulSets with persistent volumes; the hosted example uses external services and an existing database Secret.
 
 ```bash

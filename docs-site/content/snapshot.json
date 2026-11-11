@@ -69,7 +69,7 @@
   },
   "docs/deployment.md": {
     "destination": "content/imported/deployment.md",
-    "sha256": "7cd4f6f32d67e36c95c3ea4e71131906529fcc54c57b445ee9306135cb90d067"
+    "sha256": "22d5d981eace0ab66517337a149b34ba39e98198d820fc69a5335d2cb9edadcb"
   },
   "docs/local-development.md": {
     "destination": "content/imported/local-development.md",
@@ -157,7 +157,7 @@
   },
   "charts/runloom/README.md": {
     "destination": "content/sources/charts/runloom/README.md",
-    "sha256": "3717cded6249a0d499495fb546b5c9d64c6d16929fbb8bf8aebf8eb439b4705a"
+    "sha256": "f6e3f69bed81a36549d8c726ea1a39bafb6e6a6cdd60e617b974e275f36c9272"
   },
   "studio/README.md": {
     "destination": "content/sources/studio/README.md",
@@ -242,6 +242,10 @@
   "config.example.yaml": {
     "destination": "content/sources/config.example.yaml",
     "sha256": "4ac4545e6222db9ea9029421cb23221f99429dd13ee58e836e7a2adfc767d792"
+  },
+  "docs/helm-values.md": {
+    "destination": "content/sources/docs/helm-values.md",
+    "sha256": "95107374afa6e42ce77f9cdec2272bf6b17f272e461fdb7a311dc8510e3cb968"
   },
   "charts/runloom/values-production.yaml": {
     "destination": "content/sources/charts/runloom/values-production.yaml",

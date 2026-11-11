@@ -1,5 +1,7 @@
 # Runloom Helm chart
 
+Use the [Helm values guide](../../docs/helm-values.md) to choose a deployment mode, prepare required resources, and configure optional features.
+
 ## Documentation website
 
 The independent `docs` Deployment and ClusterIP Service serve the documentation site on a separate browser origin. `docs.publicURL` defaults to http://localhost:4400 and is mounted into Studio's public configuration; the sidebar opens it in a new tab. Docs receive `auth.publicURL` as their return-to-Studio destination. Neither public file includes credentials. `make k8s-docs` forwards the service locally, and `make k8s-open` forwards docs together with Studio. `K8S_DOCS_PORT=4500 make k8s-upgrade` changes the installed local docs address and sidebar link together.
