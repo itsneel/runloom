@@ -274,6 +274,7 @@ help:
 	@echo "  make helm-lint             Check development and external-service charts"
 	@echo "  make helm-template         Render Kubernetes manifests locally"
 	@echo "  make helm-package          Package the chart in dist/charts"
+	@echo "  make helm-verify-publish   Verify published chart in github.com/itsneel/charts"
 	@echo ""
 	@echo "Local Kubernetes (kind; never uses the selected remote context)"
 	@echo "  make k8s-cluster           Create or reuse the local kind cluster"
@@ -578,6 +579,11 @@ helm-template:
 helm-package:
 	mkdir -p dist/charts
 	$(HELM) package charts/runloom --destination dist/charts
+
+helm-verify-publish:
+	$(HELM) repo add runloom https://itsneel.github.io/runloom/charts --force-update
+	$(HELM) repo update runloom
+	$(HELM) search repo runloom/ --versions --devel 
 
 # Controller is a separate, explicitly enabled release. These targets never deploy.
 .PHONY: helm-ingress-deps helm-ingress-template helm-ingress-package
