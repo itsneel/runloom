@@ -108,6 +108,8 @@ For LLM nodes, copy `compose/config/worker.yaml` to your own configuration file,
 
 ## Helm chart
 
+Use the [Helm values guide](helm-values.md) to choose a deployment mode, prepare required resources, and configure optional features.
+
 The chart at [charts/runloom](../charts/runloom) deploys the gateway, Auth, Workflows API, worker, Management and four independent Studio applications. Assistant and documentation have separate Deployments and Services when enabled. It also supplies per-component configuration, probes, resource requests/limits, optional autoscaling/disruption budgets and optional ingress. The worker's Service is internal, not a public execution API. Workflow-node LLM credentials mount into the worker; Assistant uses its own provider configuration. Documentation has a separate `docs.publicURL` and optional `docs.ingress`, not a Studio subpath.
 
 The development chart includes a persistent Temporal development server and Keycloak's PostgreSQL database as StatefulSets, plus Keycloak and Mailpit Deployments. The local Kind helper separately prepares the selected application database server and credentials; the database-setup hook provisions service-owned databases. Direct Helm installations must supply those resources or use externally provisioned databases. The chart defaults to `database.driver=postgres`; `mongodb` is also supported. Set `auth.publicURL` to the exact Studio browser origin (default http://localhost:4200). The cluster needs a default StorageClass, or set `development.persistence.storageClass`.
