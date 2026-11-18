@@ -1119,6 +1119,7 @@ h3 {
 }
 .setup-note > site-icon {
   width: 20px;
+  flex-shrink: 0;
 }
 .setup-note p {
   font-size: 10px;
@@ -1128,6 +1129,28 @@ h3 {
 .setup-note strong {
   color: #e1d3ef;
   font-weight: 500;
+}
+.install-instructions {
+  min-width: 0;
+}
+.install-instructions pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  padding: 12px;
+  border: 1px solid #bfa3d54d;
+  border-radius: 8px;
+  background: #221237;
+  font-size: 12px;
+  line-height: 1.7;
+}
+.install-instructions a {
+  color: inherit;
+  text-decoration: underline;
+}
+.installer-download {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 12px;
 }
 footer {
   padding-block: 47px 26px;

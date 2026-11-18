@@ -2,22 +2,13 @@ import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { siteConfig } from "../src/app/content";
 
-test("login opens the configured Studio from desktop and mobile navigation", async ({ page }) => {
-  // Stub only the destination so this suite remains independent of Studio.
-  await page.route(siteConfig.studioUrl, (route) => route.fulfill({
-    contentType: "text/html",
-    body: "<h1>Studio sign in</h1>",
-  }));
+test("public website hides Studio links on desktop and mobile", async ({ page }) => {
+  expect(siteConfig.studioUrl).toBe("");
   await page.goto("/");
   const menu = page.getByRole("button", { name: "Toggle navigation" });
   if (await menu.isVisible()) await menu.click();
-  const login = page.getByRole("navigation", { name: "Main navigation" })
-    .getByRole("link", { name: "Log in", exact: true });
-  await expect(login).toBeVisible();
-  await expect(login).toHaveAttribute("href", siteConfig.studioUrl);
-  await login.click();
-  await expect(page).toHaveURL(siteConfig.studioUrl);
-  await expect(page.getByRole("heading", { name: "Studio sign in" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Log in", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Open workflow studio" })).toHaveCount(0);
 });
 
 test("home page and expanded JSON meet automated accessibility checks", async ({
@@ -71,6 +62,13 @@ test("loads independently with working navigation and no overflow", async ({
       () => document.documentElement.scrollWidth <= window.innerWidth,
     ),
   ).toBe(true);
+  await expect(page.locator(".install-instructions code")).toHaveText(
+    "curl -fsSL https://itsneel.github.io/runloom/install.sh | bash -s -- VERSION",
+  );
+  await expect(page.getByRole("link", { name: "View installer" })).toHaveAttribute(
+    "href",
+    "https://raw.githubusercontent.com/itsneel/runloom/master/scripts/install-version.sh",
+  );
   if (
     await page.getByRole("button", { name: "Toggle navigation" }).isVisible()
   ) {

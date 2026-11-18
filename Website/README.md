@@ -48,13 +48,25 @@ The small Node preview server is loopback-only, serves existing build files, rej
 2. Upload the contents of `dist/runloom-website/browser/` to your static web host, along with the generated third-party license notices. No Go server, identity service, database, containers, or server-side JavaScript are needed to serve it.
 3. Configure the host to serve `index.html` at the website root over HTTPS. Navigation uses in-page anchors, so client-side routing rewrites are not needed. Do not cache `index.html` indefinitely; hashed bundles may be cached long-term.
 4. For hosting under a subdirectory, build with `npm run build -- --base-href /runloom/` and serve the output at that exact path. The included preview server serves the default root build only.
-5. Before publishing, review metadata in `src/index.html`, configure real links as described below, and verify the site at its final origin. This repository does not deploy or publish the site automatically.
+5. Before publishing, review metadata in `src/index.html`, configure real links as described below, and verify the site at its final origin. GitHub Pages publication follows the workflow described below.
 
 The site is client rendered and needs JavaScript for the full experience. Basic product text is provided in a `noscript` fallback; prerendering/SSR is not configured. Metadata has no invented canonical URL or social image.
 
+## GitHub Pages publication
+
+Start the [Pages workflow](../.github/workflows/pages.yml) through **Actions → Publish website → Run workflow**, selecting the branch to publish. It builds the selected commit. Repository administrators must enable **Settings → Pages → Source → GitHub Actions** and allow the selected branch in the `github-pages` environment.
+
+The workflow derives the Angular base path from the Pages configuration. For this repository the default URL is `https://itsneel.github.io/runloom/`. Its deployment contains the website's browser files, third-party license notices, and `install.sh`, copied from the canonical [release installer](../scripts/install-version.sh). After publishing, it compares the deployed home page and installer with its build output. After a failure, inspect the failed step and rerun the failed job. To restore an earlier design, revert the website change on the publishing branch and manually run the workflow again.
+
+The **Get started** section provides `curl -fsSL https://itsneel.github.io/runloom/install.sh | bash -s -- VERSION`. The version is an installer argument selected by the visitor. Website publication has no version input. See [local release installation](../README.md#install-a-published-release-locally) for prerequisites, effects, and options. Local website builds do not copy the installer; Pages assembly adds it. When using another host, copy `scripts/install-version.sh` to its public `install.sh` path and update the command's URL in `src/app/app.html`.
+
+The existing [release workflow](../.github/workflows/release.yml) also deploys to this repository's Pages site. Each Pages deployment replaces the entire site, so a website deployment removes the previously hosted chart catalog, and a later chart deployment replaces the website. Hosting both independently requires a separate Pages repository or another hosting destination for one of them.
+
+Configuration verified in the working tree on 2026-11-18. Live publication requires these changes to be committed and the manual Pages workflow to succeed.
+
 ## Content and links
 
-Edit `src/app/content.ts` for demo scenarios, FAQs, and `siteConfig`. The navigation's **Log in** button and **Open workflow studio** link open the separately hosted Studio, which handles authentication. The website never collects credentials or tokens. Locally, `studioUrl` defaults to `http://localhost:24200/` for the `make fresh-up` Docker Compose stack. Before publishing, change it to your public Studio HTTP(S) URL and rebuild; use an empty string to hide both Studio links when no instance is available. Set `repositoryUrl` to the real source repository URL; it defaults to an empty string, hiding the repository link.
+Edit `src/app/content.ts` for demo scenarios, FAQs, and `siteConfig`. The navigation's **Log in** button and **Open workflow studio** link open the separately hosted Studio, which handles authentication. The website never collects credentials or tokens. `studioUrl` defaults to an empty string, hiding both Studio links on the public website. The local preview can supply its own Studio destination through hosting metadata. Set `repositoryUrl` to the real source repository URL; it defaults to an empty string, hiding the repository link.
 
 From the repository root, `make k8s-open` builds this independent website and opens a local preview linked to the installed Kubernetes Studio. It prints connection details and local admin information before opening the browser; account setup and Kubernetes orchestration live outside this website. Keep its terminal open. The preview server accepts `RUNLOOM_WEBSITE_STUDIO_URL` as an HTTP loopback origin and inserts a `runloom-studio-url` metadata tag in the served HTML without modifying source or build files. Both Studio links use that metadata when present, otherwise the normal `siteConfig` default. No credentials or tokens enter the website. See [local Kubernetes setup](../docs/deployment.md#development-cluster).
 

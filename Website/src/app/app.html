@@ -438,11 +438,17 @@
     </div>
     <div class="setup-note">
       <site-icon name="code" />
-      <p>
-        <strong>Self-host the full product</strong><br />Use the repository's
-        README.md for Go, Angular, Temporal, identity, and database setup. This
-        website runs independently.
-      </p>
+      <div class="install-instructions">
+        <p><strong>Install Runloom locally</strong></p>
+        <pre aria-label="Terminal install command"><code>curl -fsSL https://itsneel.github.io/runloom/install.sh | bash -s -- VERSION</code></pre>
+        <p>
+          Replace VERSION with a
+          <a href="https://github.com/itsneel/runloom/releases">published release</a>.
+          Requires Docker running, kind, kubectl, Helm, Node.js, curl and tar.
+          Creates a local cluster, installs Runloom, and prints development login details.
+        </p>
+        <a class="installer-download" href="https://raw.githubusercontent.com/itsneel/runloom/master/scripts/install-version.sh">View installer</a>
+      </div>
     </div>
   </section>
 </main>

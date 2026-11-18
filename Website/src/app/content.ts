@@ -1,8 +1,8 @@
 // This website has no runtime dependency on the studio, API, or identity provider.
 // Set real public HTTPS URLs when publishing; blank URLs hide external links.
 export const siteConfig = {
-  // Local Docker Compose Studio. Set the public Studio URL before publishing.
-  studioUrl: "http://localhost:24200/",
+  // Public website has no hosted Studio destination.
+  studioUrl: "",
   repositoryUrl: "",
 };
 
