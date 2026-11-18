@@ -440,10 +440,11 @@
       <site-icon name="code" />
       <div class="install-instructions">
         <p><strong>Install Runloom locally</strong></p>
-        <pre aria-label="Terminal install command"><code>curl -fsSL https://itsneel.github.io/runloom/install.sh | bash -s -- VERSION</code></pre>
+        <pre aria-label="Terminal install command"><code>curl -fsSL https://itsneel.github.io/runloom/install.sh | bash</code></pre>
         <p>
-          Replace VERSION with a
-          <a href="https://github.com/itsneel/runloom/releases">published release</a>.
+          Installs the latest stable
+          <a href="https://github.com/itsneel/runloom/releases">release</a>.
+          For a specific version, use <code>bash -s -- 0.1.0</code> instead of <code>bash</code>.
           Requires Docker running, kind, kubectl, Helm, Node.js, curl and tar.
           Creates a local cluster, installs Runloom, and prints development login details.
         </p>

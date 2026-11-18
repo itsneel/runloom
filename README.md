@@ -17,15 +17,17 @@ Website publication is pending as of 2026-11-18. The install command below downl
 
 ### Install a published release locally
 
-Requires **Docker running**, **kind**, **kubectl**, **Helm**, **Node.js**, **curl**, and **tar**. Run from any directory, replacing `0.1.0` with your chosen [release version](https://github.com/itsneel/runloom/releases).
+Requires **Docker running**, **kind**, **kubectl**, **Helm**, **Node.js**, **curl**, and **tar**. Run from any directory to install GitHub's latest stable release:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/itsneel/runloom/master/scripts/install-version.sh | bash -s -- 0.1.0
+curl -fsSL https://raw.githubusercontent.com/itsneel/runloom/master/scripts/install-version.sh | bash
 ```
+
+To choose a specific [release](https://github.com/itsneel/runloom/releases), including a prerelease, replace `bash` with `bash -s -- 0.1.0`. To install without keeping port forwarding open, use `bash -s -- --no-forward`. If the latest-release lookup fails, the installer stops before changing the cluster and asks you to retry or specify a version.
 
 The [installer](scripts/install-version.sh) creates or reuses the `runloom-rc` kind cluster, installs the published Runloom chart with PostgreSQL, and prints development login details. Open **http://localhost:4210** while the command is running. Ctrl+C stops forwarding and leaves the cluster and data intact. Reusing an installation applies the selected release to it.
 
-Append `--no-forward` to exit after installation checks. Use `bash scripts/install-version.sh --help` from a checkout for cluster, port, and timeout options. This setup is for local development.
+Use `bash scripts/install-version.sh --help` from a checkout for cluster, port, and timeout options. This setup is for local development.
 
 ### Install on your Kubernetes cluster
 

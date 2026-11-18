@@ -62,8 +62,8 @@ test("loads independently with working navigation and no overflow", async ({
       () => document.documentElement.scrollWidth <= window.innerWidth,
     ),
   ).toBe(true);
-  await expect(page.locator(".install-instructions code")).toHaveText(
-    "curl -fsSL https://itsneel.github.io/runloom/install.sh | bash -s -- VERSION",
+  await expect(page.locator(".install-instructions pre code")).toHaveText(
+    "curl -fsSL https://itsneel.github.io/runloom/install.sh | bash",
   );
   await expect(page.getByRole("link", { name: "View installer" })).toHaveAttribute(
     "href",

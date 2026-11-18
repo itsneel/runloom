@@ -287,7 +287,7 @@ help:
 	@echo "  make k8s-status            Show local release, pods, services and volumes"
 	@echo "  make k8s-logs              Follow all namespace pod/container logs (Ctrl+C stops tailing)"
 	@echo "  make k8s-test              Run the installed chart's connectivity test"
-	@echo "  make install-version       Install a published release on runloom-<version>; pass VERSION=0.1.0-rc.1"
+	@echo "  make install-version       Install latest stable release on runloom-rc; optionally pass VERSION=0.1.0"
 	@echo "  make test-k8s-services     Verify local browser/API flows and org namespaces"
 	@echo "  make test-local-k8s        Test command orchestration without changing a cluster"
 	@echo "  See docs/deployment.md for prerequisites and K8S_* settings"
@@ -598,7 +598,6 @@ helm-ingress-package:
 .PHONY: k8s-cluster k8s-up k8s-down k8s-install k8s-upgrade k8s-run k8s-open k8s-status k8s-logs k8s-test test-local-k8s k8s-consumer-setup install-version
 
 install-version:
-	@test -n "$(VERSION)" || { echo "Usage: make install-version VERSION=0.1.0-rc.1" >&2; exit 2; }
 	bash scripts/install-version.sh "$(VERSION)"
 
 k8s-consumer-setup:
