@@ -193,7 +193,7 @@
   },
   "CONTRIBUTING.md": {
     "destination": "content/sources/CONTRIBUTING.md",
-    "sha256": "c2a608219f51654696c7eb57dd7f6c2c5f603a7a285b939f1200420fc6856ff4"
+    "sha256": "1316259c523e77a8abdd5d8ca3a585c1d58cb2eada67e431af7eb56fd192b3bd"
   },
   "server/workflows/internal/api/consumer.go": {
     "destination": "content/sources/server/workflows/internal/api/consumer.go",

@@ -123,7 +123,58 @@ NOTES
       --generate-notes --notes-file "$out/registry-notes.md"
   fi
   gh release upload "$tag" "$out/runloom-$VERSION.tgz" "$out/runloom-ingress-$VERSION.tgz" "$out/image-digests.tsv" --clobber
-  gh release edit "$tag" --draft=false --prerelease="$prerelease"
+  # The final serialized job controls Latest after all release checks pass.
+  gh release edit "$tag" --draft=false --prerelease="$prerelease" --latest=false
+}
+
+latest() {
+  local newest images name digest ref actual
+  if [[ $VERSION == *-* ]]; then
+    echo "Prerelease $tag does not update latest."
+    return
+  fi
+  # Compare numeric SemVer components, not release dates or lexical tag order.
+  # Pagination includes older releases; drafts and prereleases are not candidates.
+  newest=$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
+    --jq '.[] | select(.draft == false and .prerelease == false) | .tag_name' |
+    python3 -c '
+import re, sys
+versions = {}
+for line in sys.stdin:
+    tag = line.strip()
+    if re.fullmatch(r"v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)", tag):
+        versions[tag] = tuple(map(int, tag[1:].split(".")))
+candidate = "v" + sys.argv[1]
+if candidate not in versions:
+    sys.exit("Candidate must be a published stable release.")
+print(max(versions, key=versions.get))
+' "$VERSION")
+  if [[ $newest != "$tag" ]]; then
+    echo "Skipping latest for $tag; newer stable release $newest exists."
+    return
+  fi
+  mkdir -p "$out/latest"
+  gh release download "$tag" --pattern image-digests.tsv --dir "$out/latest" --clobber
+  images=$(inventory)
+  printf '%s\n' "$images" | sort > "$out/latest/expected-images"
+  cut -f1 "$out/latest/image-digests.tsv" | sort > "$out/latest/actual-images"
+  cmp "$out/latest/expected-images" "$out/latest/actual-images" || die 'Release image inventory does not match this revision.'
+  # Validate the complete inventory before moving any tag.
+  while IFS=$'\t' read -r name digest; do
+    [[ $digest =~ ^sha256:[a-f0-9]{64}$ ]] || die "Invalid digest for $name."
+    ref="$REGISTRY/$name"
+    actual=$(docker buildx imagetools inspect "$ref:$VERSION" | awk '$1 == "Digest:" && !found {print $2; found=1}')
+    [[ $actual == "$digest" ]] || die "Versioned image $ref:$VERSION differs from the release inventory."
+  done < "$out/latest/image-digests.tsv"
+  while IFS=$'\t' read -r name digest; do
+    ref="$REGISTRY/$name"
+    docker buildx imagetools create --tag "$ref:latest" "$ref@$digest"
+    actual=$(docker buildx imagetools inspect "$ref:latest" | awk '$1 == "Digest:" && !found {print $2; found=1}')
+    [[ $actual == "$digest" ]] || die "Latest digest verification failed for $name."
+  done < "$out/latest/image-digests.tsv"
+  gh release edit "$tag" --latest
+  [[ $(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq '.tag_name') == "$tag" ]] || die 'GitHub Latest release verification failed.'
+  echo "Promoted $tag and its verified image indexes to latest."
 }
 
 case ${1:-} in
@@ -132,5 +183,6 @@ case ${1:-} in
   promote) promote ;;
   package) package ;;
   publish) publish ;;
-  *) die 'Expected reserve, stage, promote, package, or publish.' ;;
+  latest) latest ;;
+  *) die 'Expected reserve, stage, promote, package, publish, or latest.' ;;
 esac

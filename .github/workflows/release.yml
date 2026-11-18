@@ -52,6 +52,8 @@ jobs:
           persist-credentials: false
       - name: Test Helm repository indexing and downloads
         run: python3 scripts/tests/helm-repository.py
+      - name: Test release latest promotion
+        run: python3 scripts/tests/release-latest.py
       - name: Check GitHub Pages configuration
         id: pages
         uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5.0.0
@@ -170,3 +172,26 @@ jobs:
             cmp "dist/pages/charts/$chart-$VERSION.tgz" "dist/remote/$chart-$VERSION.tgz"
           done
           echo "Helm repository: $repo" >> "$GITHUB_STEP_SUMMARY"
+
+  latest:
+    needs: [prepare, helm-repository]
+    runs-on: ubuntu-24.04
+    # Serialize moving tags across versions, including retries of older runs.
+    concurrency:
+      group: runloom-release-latest
+      cancel-in-progress: false
+      queue: max
+    permissions:
+      contents: write
+      packages: write
+    env:
+      REGISTRY: ${{ needs.prepare.outputs.registry }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Authenticate to GHCR
+        run: echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+      - name: Promote stable image tags and GitHub Latest release
+        run: bash scripts/release.sh latest
