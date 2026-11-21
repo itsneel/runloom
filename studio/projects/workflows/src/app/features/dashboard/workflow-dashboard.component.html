@@ -43,9 +43,10 @@
         <div class="empty" *ngIf="!rows.length">
           <span class="empty-icon"><runloom-icon name="workflow" /></span>
           <h2>{{ workflows.length ? 'No matching workflows' : 'Your project starts here' }}</h2>
-          <p>{{ workflows.length ? 'Try another name, ID or status.' : 'Create a workflow to build your first automation in this project.' }}</p>
+          <p>{{ workflows.length ? 'Try another name, ID or status.' : canCreate ? 'Create a workflow or try a greeting example with no external services.' : 'Workflows created in this project will appear here.' }}</p>
           <button type="button" *ngIf="workflows.length" (click)="clearFilters()">Clear filters</button>
           <button type="button" *ngIf="!workflows.length && canCreate" (click)="create.emit()">Create workflow</button>
+          <button type="button" *ngIf="!workflows.length && canCreate" (click)="example.emit('greeting')">Try an example</button>
         </div>
         <footer *ngIf="rows.length">{{ rows.length }} of {{ workflows.length }} workflows · {{ projectName }}</footer>
       </ng-container>

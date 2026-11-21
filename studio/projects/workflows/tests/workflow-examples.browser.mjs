@@ -41,6 +41,9 @@ try {
   await page.getByRole('button', {name: 'Edit Greet customer', exact: true}).waitFor();
   await page.getByRole('button', {name: 'Edit Greet reviewer', exact: true}).waitFor();
   await page.getByRole('button', {name: 'Test workflow', exact: true}).click();
+  assert.equal(await page.getByRole('textbox', {name: 'customer (required)'}).inputValue(), 'Avery');
+  assert.equal(await page.getByRole('textbox', {name: 'reviewer (required)'}).inputValue(), 'Jordan');
+  await page.getByRole('button', {name: 'Edit JSON', exact: true}).click();
   assert.deepEqual(JSON.parse(await page.getByLabel('Test input', {exact: true}).inputValue()), {customer: 'Avery', reviewer: 'Jordan'});
   await page.reload();
   await page.waitForFunction(() => window.ng?.getComponent(document.querySelector('app-root'))?.auth.ready());
@@ -51,6 +54,9 @@ try {
     auth.organizationId.set(fixture.org); auth.teamId.set(fixture.team); auth.signedIn.set(true);
   }, fixture);
   await page.getByRole('button', {name: 'Test workflow', exact: true}).click();
+  assert.equal(await page.getByRole('textbox', {name: 'customer (required)'}).inputValue(), 'Avery');
+  assert.equal(await page.getByRole('textbox', {name: 'reviewer (required)'}).inputValue(), 'Jordan');
+  await page.getByRole('button', {name: 'Edit JSON', exact: true}).click();
   assert.deepEqual(JSON.parse(await page.getByLabel('Test input', {exact: true}).inputValue()), {customer: 'Avery', reviewer: 'Jordan'});
   assert.deepEqual(errors, []);
   console.log('PASS guided parallel sample: confirmation/cancel, Go draft and publish APIs, unique child/parent IDs, editor route, graph, prefilled input and reload; no workflow executed by preparation.');

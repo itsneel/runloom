@@ -13,3 +13,8 @@
 1. List the checks run and their results.
 2. Describe manual validation; include screenshots for UI changes.
 3. Identify checks not run or skipped and explain why.
+
+## Reviewer guidance
+
+1. Describe the main user journey or example reviewers should check.
+2. Identify known limitations, unresolved questions, and any rollout or rollback steps that apply.

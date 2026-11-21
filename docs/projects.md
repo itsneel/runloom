@@ -78,3 +78,9 @@ Verified locally on 2026-10-20: workflow service tests/build, independent host a
 The opt-in `server/workflows/tests/deletion_browser_test.go` fixture and `studio/projects/workflows/tests/deletion.browser.mjs` exercise real Angular and Go API interactions: cancellation, draft deletion, empty-project deletion, stale publication checks and Ctrl/Cmd+S without downloads. This fixture uses disposable file storage and synthetic identity on loopback, not the deployed authentication service. Run the Go fixture with `RUNLOOM_DELETION_BROWSER=1 go test ./tests -run '^TestDeletionBrowserAPI$' -v -count=1 -timeout 4m` from `server/workflows`, then run the browser script against local host/workflows development servers. The script stops the fixture on completion.
 
 `studio/projects/workflows/tests/workflow-routes.browser.mjs` uses a fresh instance of the same fixture to verify project/editor direct links, refresh, sidebar highlights, parameter changes, guarded Back/Forward navigation, stable URLs after project moves, and missing-resource states. This routing suite and the independent host/workflows tests and builds passed locally on 2026-10-20; no cluster deployment is implied.
+
+## Testing a first workflow
+
+1. With workflow creation permission, open an empty project and choose **Try an example**. The greeting workflow uses a manual trigger and an echo step. Save the draft once.
+2. Open **Test workflow**, change the prefilled name if desired, and select **Start new test**. With the name Avery, the expected output is `Hello, Avery!`. This example requires no connections or credentials.
+3. Workflows with declared string, number, integer or boolean inputs show labeled fields. Required fields and common type or range errors appear beside the input. Select **Edit JSON** to supply an exact payload. Workflows with nested inputs or no declared properties use the JSON editor. Tests execute the workflow's configured activities.

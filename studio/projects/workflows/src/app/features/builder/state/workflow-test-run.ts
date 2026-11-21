@@ -1,3 +1,4 @@
+import { editTestField, fieldError, testFields, type TestField } from '../model/test-input';
 import type { WorkflowApiService } from '../../../core/api/workflow-api.service';
 import type {
   PauseGate,
@@ -25,7 +26,47 @@ export class WorkflowTestRun {
   pollTimer?: ReturnType<typeof setInterval>;
   runOpen = false;
   startingTest = false;
-  runInput = '{\n  "employee_name": "Avery",\n  "department": "Engineering"\n}';
+  runInput = '{}';
+  preferJson = false;
+  readonly errorForField = fieldError;
+
+  get fields() {
+    return testFields(this.context.definition.input_schema);
+  }
+
+  get inputObject(): Record<string, unknown> | null {
+    try {
+      const value = JSON.parse(this.runInput);
+      return value && typeof value === 'object' && !Array.isArray(value) ? value : null;
+    } catch {
+      return null;
+    }
+  }
+
+  get invalidFields(): boolean {
+    const input = this.inputObject;
+    return !this.preferJson && !!input && this.fields.some((field) => !!fieldError(field, input));
+  }
+
+  private lastEntry?: { field: string; text: string; payload: string };
+
+  toggleInputMode(): void {
+    this.preferJson = !this.preferJson;
+    this.lastEntry = undefined;
+  }
+
+  fieldText(field: TestField, input: Record<string, unknown>): string {
+    if (this.lastEntry?.field === field.key && this.lastEntry.payload === this.runInput)
+      return this.lastEntry.text;
+    return Object.hasOwn(input, field.key) ? String(input[field.key]) : '';
+  }
+
+  updateField(field: TestField, text: string): void {
+    const input = this.inputObject;
+    if (!input) return;
+    this.runInput = editTestField(input, field, text);
+    this.lastEntry = { field: field.key, text, payload: this.runInput };
+  }
   callbackPayload = '{\n  "status": "ready"\n}';
   resumePayload = '{}';
   signalPayload = '{\n  "status": "received"\n}';
@@ -92,7 +133,7 @@ export class WorkflowTestRun {
 
   async startRun(): Promise<void> {
     if (this.startingTest || !this.context.canEdit() || (!!this.run && !this.runFinished)) return;
-    if (!this.context.canSaveEditors()) return;
+    if (!this.context.canSaveEditors() || this.invalidFields) return;
     if (this.context.isNewWorkflow) {
       this.context.notify(
         'Save this new workflow as a draft once before testing. Publishing is not required.',

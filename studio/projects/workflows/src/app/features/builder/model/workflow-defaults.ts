@@ -306,6 +306,29 @@ export function emptyDefinition(): WorkflowDefinition {
   };
 }
 
+export function greetingDefinition(): WorkflowDefinition {
+  return {
+    ...emptyDefinition(),
+    name: 'Greeting example',
+    description: 'Save the draft, then test it with your name to see a greeting.',
+    input_schema: {
+      type: 'object',
+      required: ['name'],
+      properties: { name: { type: 'string', minLength: 1 } },
+    },
+    steps: [
+      {
+        id: 'greeting',
+        name: 'Say hello',
+        type: 'activity',
+        activity: 'runloom.echo',
+        with: { message: 'Hello, ${input.name}!' },
+      },
+    ],
+    output: '${steps.greeting.output.message}',
+  };
+}
+
 export function exampleDefinition(): WorkflowDefinition {
   return {
     schema_version: '1.0',

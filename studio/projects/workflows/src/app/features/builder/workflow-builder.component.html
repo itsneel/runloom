@@ -1741,19 +1741,61 @@
         Independent child test: uses the current draft and runs real activities, including external
         side effects. Normal API, webhook and schedule starts remain blocked.
       </p>
-      <label class="field"
-        ><span>Test input</span
-        ><textarea
-          aria-label="Test input"
-          class="code"
-          rows="8"
-          [(ngModel)]="testRun.runInput"
-        ></textarea></label
-      ><button
+      @if (testRun.fields.length) {
+        <button
+          type="button"
+          class="plain-button"
+          [disabled]="testRun.preferJson && !testRun.inputObject"
+          (click)="testRun.toggleInputMode()"
+        >
+          {{ testRun.preferJson ? 'Use labeled fields' : 'Edit JSON' }}
+        </button>
+      }
+      @if (testRun.fields.length && !testRun.preferJson && testRun.inputObject; as input) {
+        @for (field of testRun.fields; track field.key; let index = $index) {
+          <label class="field">
+            <span>{{ field.label }} {{ field.required ? '(required)' : '(optional)' }}</span>
+            @if (field.rule.type === 'boolean') {
+              <select
+                [ngModel]="input[field.key] ?? ''"
+                (ngModelChange)="testRun.updateField(field, $event)"
+                [attr.aria-describedby]="'test-hint-' + index"
+              >
+                <option value="">Choose a value</option>
+                <option value="true">True</option>
+                <option value="false">False</option>
+              </select>
+            } @else {
+              <input
+                [ngModel]="testRun.fieldText(field, input)"
+                (ngModelChange)="testRun.updateField(field, $event)"
+                [attr.aria-required]="field.required"
+                [attr.aria-invalid]="!!testRun.errorForField(field, input)"
+                [attr.aria-describedby]="'test-hint-' + index"
+              />
+            }
+            <small [id]="'test-hint-' + index">{{ testRun.errorForField(field, input) }}</small>
+          </label>
+        }
+      } @else {
+        <label class="field"
+          ><span>Test input (JSON)</span
+          ><textarea
+            aria-label="Test input"
+            class="code"
+            rows="8"
+            [(ngModel)]="testRun.runInput"
+          ></textarea>
+        </label>
+      }
+      <button
         class="test-button full"
         type="button"
         [disabled]="
-          !auth.canEdit() || testRun.startingTest || (!!testRun.run && !testRun.runFinished)
+          !auth.canEdit() ||
+          testRun.invalidFields ||
+          testRun.startingTest ||
+          (!!testRun.run && !testRun.runFinished)
         "
         (click)="testRun.startRun()"
       >

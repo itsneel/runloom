@@ -115,3 +115,14 @@ test('repeat sample creation uses new IDs without republishing old workflows', a
   await f.controller.createParallel();
   assert.equal(new Set(f.saved.map(item => item.id)).size, 4);
 });
+
+test('first workflow example only echoes the declared name locally', () => {
+  const {greetingDefinition} = loadTypeScript(new URL('../src/app/features/builder/model/workflow-defaults.ts', import.meta.url));
+  const example = greetingDefinition();
+  assert.equal(example.trigger.type, 'manual');
+  assert.deepEqual(json(example.input_schema.required), ['name']);
+  assert.equal(example.steps.length, 1);
+  assert.equal(example.steps[0].activity, 'runloom.echo');
+  assert.equal(example.steps[0].with.message, 'Hello, ${input.name}!');
+  assert.equal(example.output, '${steps.greeting.output.message}');
+});

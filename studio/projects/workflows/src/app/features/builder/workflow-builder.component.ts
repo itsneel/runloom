@@ -7,7 +7,7 @@ import { WorkflowEditor } from './state/workflow-editor';
 import { WorkflowEditLock } from './state/workflow-edit-lock';
 import { WorkflowTestRun } from './state/workflow-test-run';
 import { LibraryDeletion } from './state/library-deletion';
-import { emptyDefinition, exampleDefinition } from './model/workflow-defaults';
+import { emptyDefinition, exampleDefinition, greetingDefinition } from './model/workflow-defaults';
 import { WorkflowExamples } from './state/workflow-examples';
 import {
   workflowPalette,
@@ -524,6 +524,10 @@ export class App implements OnInit, OnDestroy {
     this.versions.saveFailed = false;
     this.draftValidationError = '';
     this.nodeValidationErrors = Object.create(null);
+    if (this.definition.id !== definition.id) {
+      this.testRun.runInput = '{}';
+      this.testRun.preferJson = false;
+    }
     this.definition = definition;
     if (!preserveHistory) this.history.reset(this.definitionSnapshot());
     this.editor.selectedContainer = undefined;
@@ -589,7 +593,9 @@ export class App implements OnInit, OnDestroy {
     this.notify('Started a clean workflow draft.');
   }
 
-  async loadExample(kind: 'review' | 'parallel-subworkflows' = 'review'): Promise<void> {
+  async loadExample(
+    kind: 'greeting' | 'review' | 'parallel-subworkflows' = 'review',
+  ): Promise<void> {
     if (
       !this.auth.canEdit() ||
       this.projectBusy ||
@@ -605,14 +611,24 @@ export class App implements OnInit, OnDestroy {
     void this.edit.releaseEditing();
     this.edit.editLost = false;
     this.edit.editLock = undefined;
-    const example = exampleDefinition();
+    const example = kind === 'greeting' ? greetingDefinition() : exampleDefinition();
     example.id = `example-${crypto.randomUUID()}`;
     this.replaceDefinition(example, false, this.activeProjectId);
     this.editor.selectedIndex = 0;
     this.resetDetailPanels();
     this.builderOpen = true;
     this.syncJson();
-    this.notify('Example loaded. It includes every kind of stop and restart.');
+    if (kind === 'greeting') {
+      this.testRun.runInput = JSON.stringify({ name: 'Avery' }, null, 2);
+      this.notify('Save the draft, then open Test workflow. Try changing Avery to your name.');
+    } else {
+      this.testRun.runInput = JSON.stringify(
+        { employee_name: 'Avery', department: 'Engineering' },
+        null,
+        2,
+      );
+      this.notify('Example loaded. It includes every kind of stop and restart.');
+    }
   }
 
   async openDefinition(id: string, discardConfirmed = false, fromRoute = false): Promise<void> {

@@ -31,7 +31,7 @@ export class WorkflowDashboard {
   @Output() reload = new EventEmitter<void>();
   @Output() selectProject = new EventEmitter<string>();
   @Output() renameProject = new EventEmitter<void>();
-  @Output() example = new EventEmitter<'review' | 'parallel-subworkflows'>();
+  @Output() example = new EventEmitter<'greeting' | 'review' | 'parallel-subworkflows'>();
   @Output() backToProjects = new EventEmitter<void>();
   @Output() deleteWorkflow = new EventEmitter<string>();
   draftOnly(item: DefinitionSummary): boolean { return item.has_draft && !(item.latest_version > 0) && !item.published_versions?.length; }

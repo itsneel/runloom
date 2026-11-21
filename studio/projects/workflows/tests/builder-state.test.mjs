@@ -279,3 +279,27 @@ test('handler event retries retain their id after a delivery failure and new suc
   assert.equal(calls.length, 3);
   assert.equal(run.handlerSending.size, 0);
 });
+
+test('labeled test fields validate and preserve typed values and extra JSON keys', () => {
+  const ctx = context();
+  ctx.definition.input_schema = {type: 'object', required: ['count'], properties: {
+    count: {type: 'integer', minimum: 0}, active: {type: 'boolean'},
+  }};
+  const run = new WorkflowTestRun({}, ctx);
+  run.runInput = '{"extra":"keep"}';
+  const [count, active] = run.fields;
+  assert.equal(run.invalidFields, true);
+  run.updateField(count, '1.5');
+  assert.equal(run.invalidFields, true);
+  run.updateField(count, '0');
+  run.updateField(active, 'false');
+  assert.equal(run.invalidFields, false);
+  assert.deepEqual(JSON.parse(run.runInput), {extra:'keep', count:0, active:false});
+  run.updateField(active, '');
+  run.toggleInputMode();
+  assert.deepEqual(JSON.parse(run.runInput), {extra:'keep', count:0});
+  run.runInput = '{';
+  assert.equal(run.inputObject, null);
+  ctx.definition.input_schema.properties.items = {type:'array'};
+  assert.equal(run.fields.length, 0);
+});
