@@ -1,0 +1,158 @@
+{
+  "schema_version": "1.0",
+  "kind": "main",
+  "id": "rexera-lien-tag",
+  "name": "Rexera lien tagging and QA handoff",
+  "description": "TKT0020: saved current R2 source, optional Agent Tag, guarded saved tags, one handoff per supported category. QA execution and release belong to Stage 7.",
+  "version": 0,
+  "trigger": {
+    "type": "manual"
+  },
+  "input_schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "document_id",
+      "event_id"
+    ],
+    "properties": {
+      "document_id": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "event_id": {
+        "type": "string",
+        "format": "uuid"
+      }
+    }
+  },
+  "steps": [
+    {
+      "id": "read",
+      "name": "Read",
+      "type": "activity",
+      "activity": "rexera.lien.read",
+      "timeout_seconds": 60,
+      "retry": {
+        "maximum_attempts": 3,
+        "initial_interval_seconds": 1,
+        "backoff_coefficient": 2,
+        "maximum_interval_seconds": 10
+      },
+      "with": {
+        "document_id": "${input.document_id}",
+        "event_id": "${input.event_id}"
+      }
+    },
+    {
+      "id": "classify",
+      "name": "Classify",
+      "type": "activity",
+      "activity": "rexera.lien.classify",
+      "timeout_seconds": 300,
+      "retry": {
+        "maximum_attempts": 3,
+        "initial_interval_seconds": 1,
+        "backoff_coefficient": 2,
+        "maximum_interval_seconds": 10
+      },
+      "with": {
+        "document_id": "${steps.read.output.document_id}",
+        "event_id": "${steps.read.output.event_id}",
+        "revision": "${steps.read.output.revision}",
+        "classification_key": "${steps.read.output.classification_key}",
+        "needs_classification": "${steps.read.output.needs_classification}"
+      }
+    },
+    {
+      "id": "save",
+      "name": "Save",
+      "type": "activity",
+      "activity": "rexera.lien.save",
+      "timeout_seconds": 60,
+      "retry": {
+        "maximum_attempts": 3,
+        "initial_interval_seconds": 1,
+        "backoff_coefficient": 2,
+        "maximum_interval_seconds": 10
+      },
+      "with": {
+        "source": "${steps.read.output}",
+        "classification": "${steps.classify.output}"
+      }
+    },
+    {
+      "id": "plan",
+      "name": "Plan Qa",
+      "type": "activity",
+      "activity": "rexera.lien.plan-qa",
+      "timeout_seconds": 60,
+      "retry": {
+        "maximum_attempts": 3,
+        "initial_interval_seconds": 1,
+        "backoff_coefficient": 2,
+        "maximum_interval_seconds": 10
+      },
+      "with": {
+        "source": "${steps.read.output}",
+        "saved": "${steps.save.output}"
+      }
+    },
+    {
+      "id": "qa",
+      "name": "Hand off each current category",
+      "type": "foreach",
+      "foreach": {
+        "items": "${steps.plan.output.handoffs}",
+        "concurrency": 3,
+        "output": "${steps.submit.output}"
+      },
+      "branches": [
+        {
+          "id": "body",
+          "steps": [
+            {
+              "id": "submit",
+              "name": "Submit Qa",
+              "type": "activity",
+              "activity": "rexera.lien.submit-qa",
+              "timeout_seconds": 90,
+              "retry": {
+                "maximum_attempts": 3,
+                "initial_interval_seconds": 1,
+                "backoff_coefficient": 2,
+                "maximum_interval_seconds": 10
+              },
+              "with": {
+                "handoff": "${loop.item}"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "finish",
+      "name": "Finish",
+      "type": "activity",
+      "activity": "rexera.lien.finish",
+      "timeout_seconds": 60,
+      "retry": {
+        "maximum_attempts": 3,
+        "initial_interval_seconds": 1,
+        "backoff_coefficient": 2,
+        "maximum_interval_seconds": 10
+      },
+      "with": {
+        "source": "${steps.read.output}",
+        "saved": "${steps.save.output}",
+        "plan": "${steps.plan.output}"
+      }
+    }
+  ],
+  "output": {
+    "event": "${steps.finish.output}",
+    "qa_handoffs": "${steps.qa.output}",
+    "document_id": "${input.document_id}"
+  }
+}

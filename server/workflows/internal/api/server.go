@@ -148,6 +148,12 @@ func (s *Server) catalog(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{
 		"integrations": definition.IntegrationCatalog(),
 		"activities": []map[string]string{
+			{"name": "rexera.lien.read", "description": "Read the current saved R2 lien source and record actual start"},
+			{"name": "rexera.lien.classify", "description": "Call existing Agent Tag only when the saved source needs classification"},
+			{"name": "rexera.lien.save", "description": "Save classification against the current R2 source revision"},
+			{"name": "rexera.lien.plan-qa", "description": "Resolve eligible saved categories through the shared R2 QA handoff"},
+			{"name": "rexera.lien.submit-qa", "description": "Deliver a current category handoff using its stable idempotency key"},
+			{"name": "rexera.lien.finish", "description": "Complete the saved R2 tagging event"},
 			{"name": "runloom.echo", "description": "Return its input unchanged"},
 			{"name": "runloom.compose", "description": "Return a resolved message"},
 			{"name": "runloom.sum", "description": "Sum an array of numbers"},

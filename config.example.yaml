@@ -7,6 +7,16 @@ TEMPORAL_NAMESPACE: default
 # TEMPORAL_NAMESPACE_PREFIX: runloom-local
 # TEMPORAL_RETENTION_DAYS: "30"
 RUNLOOM_TASK_QUEUE: runloom
+# TKT0020 capabilities are bound to one explicitly configured Runloom team.
+# URLs and private credential files are worker configuration, never definition inputs.
+# RUNLOOM_LIEN_TEAM_ID: your-team-uuid
+# RUNLOOM_LIEN_R2_URL: https://your-r2-api.example.test
+# RUNLOOM_LIEN_R2_TOKEN_FILE: /absolute/private/r2-token
+# RUNLOOM_LIEN_CLASSIFIER_URL: https://your-ai-service.example.test/agents/tag/tag
+# RUNLOOM_LIEN_CLASSIFIER_TOKEN_FILE: /absolute/private/ai-token
+# RUNLOOM_LIEN_QA_URL: https://your-stage7-orchestrator.example.test/document-qa/handoffs
+# RUNLOOM_LIEN_QA_TOKEN_FILE: /absolute/private/qa-token
+# RUNLOOM_LIEN_ALLOW_HTTP: "false" # isolated local integration only
 RUNLOOM_API_ADDRESS: 127.0.0.1:8080
 RUNLOOM_WORKER_HEALTH_ADDRESS: 127.0.0.1:8081
 # Optional: requires a collector in the same network namespace. See docs/observability.md.

@@ -861,6 +861,17 @@
                     <label class="field"
                       ><span>Action</span
                       ><select [(ngModel)]="step.activity" (ngModelChange)="markChanged()">
+                        <option
+                          *ngIf="
+                            step.activity &&
+                            !['runloom.echo', 'runloom.compose', 'runloom.sum'].includes(
+                              step.activity
+                            )
+                          "
+                          [value]="step.activity"
+                        >
+                          {{ step.activity }}
+                        </option>
                         <option value="runloom.echo">Return data</option>
                         <option value="runloom.compose">Compose message</option>
                         <option value="runloom.sum">Add numbers</option>

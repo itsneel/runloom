@@ -81,3 +81,5 @@ Studio and consumer APIs use different authentication and permissions. Their int
 ## License
 
 Runloom's original code, documentation, schemas, and examples are licensed under [Apache 2.0](LICENSE). Dependencies and bundled services retain their own licenses. See [third-party notices](THIRD_PARTY_NOTICES.md).
+
+See the [Rexera lien integration guide](docs/rexera-lien-integration.md) for the opt-in saved-document example, worker configuration and fixture boundaries.

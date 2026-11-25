@@ -1,0 +1,112 @@
+{
+  "schema_version": "1.0",
+  "kind": "main",
+  "id": "lien-tag-trial",
+  "name": "Lien tagging trial",
+  "description": "Synthetic saved PDF to classifier, persisted tags and category QA handoff. All business endpoints are local stubs.",
+  "version": 0,
+  "trigger": {
+    "type": "manual"
+  },
+  "input_schema": {
+    "type": "object",
+    "required": [
+      "event_id",
+      "workflow_id",
+      "document_id",
+      "document_version",
+      "pdf_reference",
+      "source_communication_id",
+      "request_id",
+      "attempt_id",
+      "original_response_date"
+    ]
+  },
+  "steps": [
+    {
+      "id": "read",
+      "type": "activity",
+      "activity": "trial.r2.read",
+      "timeout_seconds": 10,
+      "retry": {
+        "maximum_attempts": 3,
+        "initial_interval_seconds": 0.1,
+        "backoff_coefficient": 1,
+        "maximum_interval_seconds": 0.1
+      },
+      "with": {
+        "event": "${input}"
+      }
+    },
+    {
+      "id": "classify",
+      "type": "activity",
+      "activity": "trial.classifier",
+      "timeout_seconds": 10,
+      "retry": {
+        "maximum_attempts": 3,
+        "initial_interval_seconds": 0.1,
+        "backoff_coefficient": 1,
+        "maximum_interval_seconds": 0.1
+      },
+      "with": {
+        "event_id": "${input.event_id}",
+        "order_id": "${input.workflow_id}",
+        "pdf_url": "${steps.read.output.pdf_url}",
+        "order_type": "LIEN"
+      }
+    },
+    {
+      "id": "save",
+      "type": "activity",
+      "activity": "trial.r2.save",
+      "timeout_seconds": 10,
+      "retry": {
+        "maximum_attempts": 3,
+        "initial_interval_seconds": 0.1,
+        "backoff_coefficient": 1,
+        "maximum_interval_seconds": 0.1
+      },
+      "with": {
+        "event": "${input}",
+        "document": "${steps.read.output}",
+        "primary_tag": "${steps.classify.output.final_tag}"
+      }
+    },
+    {
+      "id": "qa",
+      "type": "foreach",
+      "foreach": {
+        "items": "${steps.save.output.qa_handoffs}",
+        "concurrency": 2,
+        "output": "${steps.submit.output}"
+      },
+      "branches": [
+        {
+          "id": "body",
+          "steps": [
+            {
+              "id": "submit",
+              "type": "activity",
+              "activity": "trial.qa.submit",
+              "timeout_seconds": 10,
+              "retry": {
+                "maximum_attempts": 3,
+                "initial_interval_seconds": 0.1,
+                "backoff_coefficient": 1,
+                "maximum_interval_seconds": 0.1
+              },
+              "with": {
+                "handoff": "${loop.item}"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "output": {
+    "handoffs": "${steps.qa.output}",
+    "saved_tags": "${steps.save.output.tags}"
+  }
+}

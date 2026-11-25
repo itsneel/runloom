@@ -125,3 +125,5 @@ go test ./internal/definition ./internal/api ./internal/engine
 ```
 
 These checks validate the static JSON examples against the schemas and backend rules and execute the parent/child fixtures in Temporal's local test environment. They do not create live schedules or alter application data.
+
+1. [Rexera lien tagging](rexera-lien-tag.json) uses configured boundary activities for saved-source tagging and QA handoff. It requires the dedicated integration configuration in [the integration guide](../docs/rexera-lien-integration.md); it does not run QA or work with unconfigured sample credentials.

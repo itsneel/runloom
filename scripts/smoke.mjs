@@ -45,7 +45,7 @@ try {
   assert.equal(health.temporal, true);
   assert.equal(health.database, true);
   const catalog = await request('/api/v1/studio/catalog');
-  assert.deepEqual(catalog.activities.map(activity => activity.name), ['runloom.echo', 'runloom.compose', 'runloom.sum', 'runloom.llm']);
+  assert.deepEqual(catalog.activities.map(activity => activity.name).filter(name=>name.startsWith('runloom.')), ['runloom.echo', 'runloom.compose', 'runloom.sum', 'runloom.llm']);
 
   await request('/api/v1/studio/definitions', {
     schema_version: '1.0', id, name: 'Deployment smoke test', version: 0,

@@ -18,6 +18,7 @@ import (
 	"github.com/example/runloom/workflows/internal/engine"
 	"github.com/example/runloom/workflows/internal/mailnode"
 	"github.com/example/runloom/workflows/internal/protection"
+	"github.com/example/runloom/workflows/internal/rexeralien"
 	"github.com/example/runloom/workflows/internal/services"
 	"github.com/example/runloom/workflows/internal/store"
 	"github.com/example/runloom/workflows/internal/tenancy"
@@ -109,6 +110,7 @@ func main() {
 	defer pool.Close()
 	fleet := &tenancy.Workers{Pool: pool, Build: func(c client.Client) worker.Worker {
 		w := worker.New(c, settings.TaskQueue, worker.Options{WorkerStopTimeout: 30 * time.Second})
+		(&rexeralien.Activities{Client: rexeralien.FromConfig()}).Register(w)
 		meteredLLM := &activities.MeteredLLM{Prices: prices, Provider: provider, Ancestors: activities.LLMAncestors(c), OpenTeam: func(ctx context.Context, team string) (activities.MeteringStore, error) {
 			return teamStores.Acquire(ctx, team)
 		}}
